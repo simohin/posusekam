@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: Auth Service API
+  description: API для авторизации в приложении По сусекам
+  version: 1.0.0
+paths:
+  /v1/google:
+    post:
+      tags:
+        - Google Auth
+      summary: Авторизация через Google
+      operationId: authenticateGoogle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: Успешная авторизация, возвращаются внутренние JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+components:
+  schemas:
+    GoogleAuthRequest:
+      type: object
+      required:
+        - idToken
+      properties:
+        idToken:
+          type: string
+          description: ID токен, полученный от Google Native SDK на мобильном устройстве
+    AuthResponse:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+      properties:
+        accessToken:
+          type: string
+          description: Внутренний Access Token
+        refreshToken:
+          type: string
+          description: Внутренний Refresh Token

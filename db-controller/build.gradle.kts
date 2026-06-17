@@ -1,11 +1,9 @@
 plugins {
-    kotlin("jvm") version "2.0.0"
+    kotlin("jvm")
     application
 }
 
-repositories {
-    mavenCentral()
-}
+
 
 dependencies {
     implementation("org.flywaydb:flyway-core:10.15.2")

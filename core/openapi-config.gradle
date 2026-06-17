@@ -1,0 +1,28 @@
+apply plugin: 'org.openapi.generator'
+
+openApiGenerate {
+    generatorName = "spring"
+    inputSpec = "$projectDir/src/main/resources/api/openapi.yaml"
+    outputDir = "$buildDir/generated/openapi"
+    
+    def basePackage = "ru.simohin.posusekam." + project.name.replace("-", "")
+    apiPackage = "${basePackage}.api"
+    modelPackage = "${basePackage}.dto"
+    
+    configOptions = [
+        interfaceOnly: "true",
+        useSpringBoot3: "true",
+        skipDefaultInterface: "true",
+        useTags: "true"
+    ]
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "$buildDir/generated/openapi/src/main/java"
+        }
+    }
+}
+
+

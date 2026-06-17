@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: auth-service
+  config:
+    import: "optional:file:/vault/secrets/application.properties"
+  datasource:
+    # Здесь мы пока пишем дефолтные значения. 
+    # В проде они будут переопределяться через Vault Agent Injector или ENV
+    url: \${DB_URL:jdbc:postgresql://localhost:5432/posusekam}
+    username: \${DB_USER:posusekam}
+    password: \${DB_PASSWORD:secret}
+  jpa:
+    hibernate:
+      ddl-auto: validate # Так как миграциями рулит db-controller, здесь только валидация
+    show-sql: false
+
+server:
+  port: 8081
+  servlet:
+    context-path: /auth
+
+posusekam:
+  jwt:
+    issuer: posusekam
+    # RSA keys for signing/verifying JWTs
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:classpath:certs/private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:certs/public.pem}
+    access-token-expiration-seconds: ${JWT_ACCESS_EXPIRATION:3600}      # 1 hour
+    refresh-token-expiration-seconds: ${JWT_REFRESH_EXPIRATION:2592000}  # 30 days
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
+

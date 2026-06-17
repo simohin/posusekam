@@ -8,3 +8,6 @@
 
 rootProject.name = "posusekam"
 include(":db-controller")
+include(":auth-service")
+include(":models")
+include(":core")

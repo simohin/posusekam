@@ -1,0 +1,89 @@
+replicaCount: 1
+
+image:
+  repository: simohin/posusekam-auth-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "auth-service"
+
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/role: "auth-service"
+  vault.hashicorp.com/agent-inject-secret-private.pem: "secret/data/posusekam/auth-service"
+  vault.hashicorp.com/agent-inject-template-private.pem: |
+    {{- with secret "secret/data/posusekam/auth-service" -}}
+    {{ .Data.data.private_key }}
+    {{- end -}}
+  vault.hashicorp.com/agent-inject-secret-public.pem: "secret/data/posusekam/auth-service"
+  vault.hashicorp.com/agent-inject-template-public.pem: |
+    {{- with secret "secret/data/posusekam/auth-service" -}}
+    {{ .Data.data.public_key }}
+    {{- end -}}
+  vault.hashicorp.com/agent-inject-secret-application.properties: "secret/data/posusekam/auth-service"
+  vault.hashicorp.com/agent-inject-template-application.properties: |
+    {{- with secret "secret/data/posusekam/auth-service" -}}
+    posusekam.google.client-id={{ .Data.data.google_client_id }}
+    {{- end -}}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8081
+
+ingress:
+  enabled: true
+  className: "traefik" # Встроенный в K3s Ingress Controller
+  annotations:
+    # Здесь можно добавить специфичные аннотации для Traefik, если понадобится (например, rewrite-target)
+  hosts:
+    - host: "" # Оставляем пустым для обработки всех хостов (localhost, IP сервера и т.д.)
+      paths:
+        - path: /auth
+          pathType: Prefix
+
+tls: []
+
+httpRoute:
+  enabled: false
+
+resources:
+  # На этапе MVP мы не ставим жесткие лимиты, но в IaC они должны быть описаны
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+database:
+  url: "jdbc:postgresql://postgres-service:5432/posusekam"
+  username: "posusekam"
+  password: "secret-password"
+
+jwt:
+  privateKeyPath: "file:/vault/secrets/private.pem"
+  publicKeyPath: "file:/vault/secrets/public.pem"
+
+google:
+  clientId: "your-google-client-id.apps.googleusercontent.com"
+
