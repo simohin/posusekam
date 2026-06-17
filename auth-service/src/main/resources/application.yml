@@ -6,9 +6,9 @@ spring:
   datasource:
     # Здесь мы пока пишем дефолтные значения. 
     # В проде они будут переопределяться через Vault Agent Injector или ENV
-    url: \${DB_URL:jdbc:postgresql://localhost:5432/posusekam}
-    username: \${DB_USER:posusekam}
-    password: \${DB_PASSWORD:secret}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/posusekam}
+    username: ${DB_USER:posusekam}
+    password: ${DB_PASSWORD:secret}
   jpa:
     hibernate:
       ddl-auto: validate # Так как миграциями рулит db-controller, здесь только валидация

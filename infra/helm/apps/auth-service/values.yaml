@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: simohin/posusekam-auth-service
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: "latest"
 
 imagePullSecrets: []
@@ -76,9 +76,9 @@ tolerations: []
 affinity: {}
 
 database:
-  url: "jdbc:postgresql://postgres-service:5432/posusekam"
+  url: "jdbc:postgresql://192.168.0.106:5432/posusekam"
   username: "posusekam"
-  password: "secret-password"
+  password: "47Gumito"
 
 jwt:
   privateKeyPath: "file:/vault/secrets/private.pem"
