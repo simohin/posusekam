@@ -1,0 +1,12 @@
+image:
+  repository: simohin/posusekam-db-controller
+  pullPolicy: Always
+  tag: "latest"
+
+serviceAccount:
+  create: true
+  name: "db-migrator"
+
+vault:
+  role: "db-migrator"
+  secretPath: "secret/data/posusekam/database"

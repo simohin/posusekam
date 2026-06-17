@@ -1,0 +1,15 @@
+server:
+  # Включаем интеграцию с Kubernetes (чтобы работал Sidecar Injector)
+  dataStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: "local-path" # Используем дефолтный StorageClass, который идет в комплекте с K3s
+
+  # Настройки UI, чтобы можно было зайти в админку через браузер
+  ui:
+    enabled: true
+    serviceType: "ClusterIP" # Позже закроем его Ингрессом, либо сделаем NodePort для тестов
+
+  # Включаем инжектор секретов в поды
+  injector:
+    enabled: true
