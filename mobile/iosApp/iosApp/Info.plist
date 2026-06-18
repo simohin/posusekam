@@ -4,5 +4,20 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>GIDClientID</key>
+	<string>365281398460-q2i5gt33ogis9498s6jdcgu938im0l63.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.365281398460-q2i5gt33ogis9498s6jdcgu938im0l63</string>
+			</array>
+		</dict>
+	</array>
+	<key>BackendURL</key>
+	<string>$(BACKEND_URL)</string>
 </dict>
 </plist>

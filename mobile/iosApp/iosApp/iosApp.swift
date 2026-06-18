@@ -3,19 +3,50 @@ import shared
 
 @main
 struct iosApp: App {
+    @StateObject private var authViewModel: AuthViewModel
+    
+    init() {
+        guard let backendUrl = Bundle.main.object(forInfoDictionaryKey: "BackendURL") as? String else {
+            fatalError("BackendURL is not configured in Info.plist")
+        }
+        _authViewModel = StateObject(wrappedValue: AuthViewModel(baseUrl: backendUrl))
+    }
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if authViewModel.isAuthenticated {
+                ContentView(authViewModel: authViewModel)
+            } else {
+                LoginView(viewModel: authViewModel)
+            }
         }
     }
 }
 
 struct ContentView: View {
+    @ObservedObject var authViewModel: AuthViewModel
     @State private var count: Int = 10
     @State private var result: [Int] = []
 
     var body: some View {
         VStack(spacing: 20) {
+            // Logout bar
+            HStack {
+                Spacer()
+                Button(action: {
+                    authViewModel.logout()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.right.square")
+                        Text("Выйти")
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(.red)
+                }
+                .padding(.top, 10)
+                .padding(.trailing, 10)
+            }
+            
             Text("POSUSEKAM")
                 .font(.largeTitle)
                 .fontWeight(.bold)
@@ -31,7 +62,7 @@ struct ContentView: View {
                 // Вызываем функцию из общего Kotlin-кода
                 let kotlinList = FibonacciKt.generateFibonacci(count: Int32(count))
                 // Конвертируем Kotlin List в Swift Array
-                result = kotlinList.map { Int(truncating: $0 as! NSNumber) }
+                result = kotlinList.map { Int(truncating: $0 as NSNumber) }
             }) {
                 Text("Generate Fibonacci")
                     .fontWeight(.bold)

@@ -13,8 +13,9 @@ class GoogleAuthService(
     @Value("\${posusekam.google.client-id}") private val googleClientId: String
 ) {
     private val verifier: GoogleIdTokenVerifier by lazy {
+        val clientIds = googleClientId.split(",").map { it.trim() }
         GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance())
-            .setAudience(Collections.singletonList(googleClientId))
+            .setAudience(clientIds)
             .build()
     }
 
