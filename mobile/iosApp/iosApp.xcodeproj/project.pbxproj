@@ -127,7 +127,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export JAVA_HOME=\"/Users/t.simokhin/.sdkman/candidates/java/current\"\nexport PATH=\"\$JAVA_HOME/bin:\$PATH\"\ncd \"\$SRCROOT/..\"\n./../gradlew :mobile:shared:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "export JAVA_HOME=\"/Users/t.simokhin/.sdkman/candidates/java/current\"\nexport PATH=\"$JAVA_HOME/bin:$PATH\"\ncd \"$SRCROOT/..\"\n./../gradlew :mobile:shared:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
