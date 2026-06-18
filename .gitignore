@@ -6,3 +6,4 @@ auth-service/src/main/resources/certs/
 .kotlin/
 
 /.env
+/local.properties

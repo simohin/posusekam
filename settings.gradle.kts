@@ -6,8 +6,19 @@
  * This project uses @Incubating APIs which are subject to change.
  */
 
+pluginManagement {
+    repositories {
+        google()
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
 rootProject.name = "posusekam"
 include(":db-controller")
 include(":auth-service")
 include(":models")
 include(":core")
+
+include(":mobile:shared")
+include(":mobile:androidApp")
