@@ -33,7 +33,7 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     // Наш эндпоинт авторизации через Google должен быть публичным
-                    .requestMatchers("/v1/google").permitAll()
+                    .requestMatchers("/v1/google", "/test-login").permitAll()
                     // Разрешаем также страницы с ошибками (для корректных ответов Spring Boot)
                     .requestMatchers("/error").permitAll()
                     // Все остальные эндпоинты требуют валидного токена

@@ -42,15 +42,7 @@ service:
   port: 8081
 
 ingress:
-  enabled: true
-  className: "traefik" # Встроенный в K3s Ingress Controller
-  annotations:
-    # Здесь можно добавить специфичные аннотации для Traefik, если понадобится (например, rewrite-target)
-  hosts:
-    - host: "" # Оставляем пустым для обработки всех хостов (localhost, IP сервера и т.д.)
-      paths:
-        - path: /auth
-          pathType: Prefix
+  enabled: false
 
 tls: []
 
