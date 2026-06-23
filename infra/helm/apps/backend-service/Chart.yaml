@@ -1,0 +1,6 @@
+apiVersion: v2
+name: backend-service
+description: A Helm chart for Kubernetes backend-service in Posusekam App
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

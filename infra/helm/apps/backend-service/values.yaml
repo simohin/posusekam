@@ -1,0 +1,60 @@
+replicaCount: 1
+
+image:
+  repository: simohin/posusekam-backend-service
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "backend-service"
+
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/role: "backend-service"
+  vault.hashicorp.com/agent-inject-secret-public.pem: "secret/data/posusekam/auth-service"
+  vault.hashicorp.com/agent-inject-template-public.pem: |
+    {{- with secret "secret/data/posusekam/auth-service" -}}
+    {{ .Data.data.public_key }}
+    {{- end -}}
+
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8082
+
+ingress:
+  enabled: false
+
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+database:
+  url: "jdbc:postgresql://192.168.0.106:5432/posusekam"
+  username: "posusekam"
+  password: "47Gumito"
+
+jwt:
+  publicKeyPath: "file:/vault/secrets/public.pem"

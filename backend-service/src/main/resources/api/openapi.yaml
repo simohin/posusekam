@@ -1,0 +1,308 @@
+openapi: 3.0.3
+info:
+  title: Backend Service API
+  description: API для управления Домохозяйствами и Магазинами в приложении По сусекам
+  version: 1.0.0
+paths:
+  /v1/households:
+    get:
+      tags:
+        - Households
+      summary: Получить список домовладений пользователя
+      operationId: listHouseholds
+      responses:
+        '200':
+          description: Список домовладений
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HouseholdDto'
+    post:
+      tags:
+        - Households
+      summary: Создать новое домовладение
+      operationId: createHousehold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHouseholdRequest'
+      responses:
+        '200':
+          description: Домохозяйство создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HouseholdDto'
+
+  /v1/households/{id}:
+    put:
+      tags:
+        - Households
+      summary: Обновить название домовладения
+      operationId: updateHousehold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHouseholdRequest'
+      responses:
+        '200':
+          description: Домохозяйство обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HouseholdDto'
+    delete:
+      tags:
+        - Households
+      summary: Удалить домовладение
+      operationId: deleteHousehold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Домохозяйство удалено
+
+  /v1/{householdId}/stores:
+    get:
+      tags:
+        - Stores
+      summary: Получить список магазинов в домовладении
+      operationId: listStores
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список магазинов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StoreDto'
+    post:
+      tags:
+        - Stores
+      summary: Создать новый магазин в домовладении
+      operationId: createStore
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStoreRequest'
+      responses:
+        '200':
+          description: Магазин создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreDto'
+
+  /v1/{householdId}/stores/{id}:
+    put:
+      tags:
+        - Stores
+      summary: Обновить информацию о магазине
+      operationId: updateStore
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStoreRequest'
+      responses:
+        '200':
+          description: Магазин обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreDto'
+    delete:
+      tags:
+        - Stores
+      summary: Удалить магазин
+      operationId: deleteStore
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Магазин удален
+
+  /v1/metadata:
+    get:
+      tags:
+        - Metadata
+      summary: Получить метаданные приложения (иконки, настройки и т.д.)
+      operationId: getMetadata
+      responses:
+        '200':
+          description: Метаданные приложения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppMetadataDto'
+
+components:
+  schemas:
+    HouseholdDto:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateHouseholdRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    UpdateHouseholdRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    StoreDto:
+      type: object
+      required:
+        - id
+        - name
+        - householdId
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        householdId:
+          type: string
+          format: uuid
+        icon:
+          type: string
+        color:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateStoreRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+
+    UpdateStoreRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+
+    AppMetadataDto:
+      type: object
+      required:
+        - icons
+      properties:
+        icons:
+          type: array
+          items:
+            $ref: '#/components/schemas/IconMetadataDto'
+
+    IconMetadataDto:
+      type: object
+      required:
+        - name
+        - displayName
+        - type
+        - category
+        - keywords
+      properties:
+        name:
+          type: string
+        displayName:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        keywords:
+          type: string
+

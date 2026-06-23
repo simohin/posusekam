@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: backend-service
+  config:
+    import: "optional:file:/vault/secrets/application.properties"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/posusekam}
+    username: ${DB_USER:posusekam}
+    password: ${DB_PASSWORD:secret}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+server:
+  port: 8082
+  servlet:
+    context-path: /api
+
+posusekam:
+  jwt:
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:certs/public.pem}
