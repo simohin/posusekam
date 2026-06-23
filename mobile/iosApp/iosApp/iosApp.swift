@@ -120,32 +120,29 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            CalculatorTab()
+            CalculatorTab(authViewModel: authViewModel)
                 .tabItem {
                     Label("Вычисления", systemImage: "function")
                 }
                 .tag(1)
-            
-            SettingsTab(authViewModel: authViewModel)
-                .tabItem {
-                    Label("Профиль", systemImage: "person.crop.circle.fill")
-                }
-                .tag(2)
         }
         .tint(.blue)
     }
 }
 
-enum StoreSheetType: Identifiable {
-    case create
-    case edit(shared.Store)
+enum OverviewSheetType: Identifiable {
+    case createStore
+    case editStore(shared.Store)
+    case profile
     
     var id: String {
         switch self {
-        case .create:
-            return "create"
-        case .edit(let store):
-            return "edit-\(store.id)"
+        case .createStore:
+            return "createStore"
+        case .editStore(let store):
+            return "editStore-\(store.id)"
+        case .profile:
+            return "profile"
         }
     }
 }
@@ -163,8 +160,8 @@ struct OverviewTab: View {
     
     @State private var showDeleteHouseholdConfirmation = false
     
-    // States for Store Form
-    @State private var activeStoreSheet: StoreSheetType? = nil
+    // States for Sheets
+    @State private var activeSheet: OverviewSheetType? = nil
     
     var body: some View {
         NavigationStack {
@@ -179,7 +176,7 @@ struct OverviewTab: View {
                                 .fontWeight(.bold)
                             Spacer()
                             Button(action: {
-                                activeStoreSheet = .create
+                                activeSheet = .createStore
                             }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
@@ -197,7 +194,7 @@ struct OverviewTab: View {
                                     .font(.headline)
                                     .foregroundColor(.secondary)
                                 Button("Добавить магазин") {
-                                    activeStoreSheet = .create
+                                    activeSheet = .createStore
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.blue)
@@ -213,7 +210,7 @@ struct OverviewTab: View {
                                     StoreCard(store: store)
                                         .contextMenu {
                                             Button {
-                                                activeStoreSheet = .edit(store)
+                                                activeSheet = .editStore(store)
                                             } label: {
                                                 Label("Редактировать", systemImage: "pencil")
                                             }
@@ -299,6 +296,29 @@ struct OverviewTab: View {
                         }
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        activeSheet = .profile
+                    }) {
+                        if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                            }
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
             }
             
             // Households Alerts
@@ -338,17 +358,19 @@ struct OverviewTab: View {
                 Text("Это удалит домовладение и все связанные магазины и продукты.")
             }
             
-            // Store Creation / Editing Form Sheet
-            .sheet(item: $activeStoreSheet) { sheetType in
+            // Sheets presentation (Store Form & Profile)
+            .sheet(item: $activeSheet) { sheetType in
                 switch sheetType {
-                case .create:
+                case .createStore:
                     StoreFormSheet(authViewModel: authViewModel, storeToEdit: nil) {
-                        activeStoreSheet = nil
+                        activeSheet = nil
                     }
-                case .edit(let store):
+                case .editStore(let store):
                     StoreFormSheet(authViewModel: authViewModel, storeToEdit: store) {
-                        activeStoreSheet = nil
+                        activeSheet = nil
                     }
+                case .profile:
+                    ProfileView(authViewModel: authViewModel)
                 }
             }
         }
@@ -753,8 +775,10 @@ struct StoreCard: View {
 
 // MARK: - Calculator Tab
 struct CalculatorTab: View {
+    @ObservedObject var authViewModel: AuthViewModel
     @State private var count: Int = 10
     @State private var result: [Int] = []
+    @State private var showProfileSheet = false
     
     var body: some View {
         NavigationStack {
@@ -792,19 +816,11 @@ struct CalculatorTab: View {
                 }
             }
             .navigationTitle("Вычисления")
-        }
-    }
-}
-
-// MARK: - Settings Tab
-struct SettingsTab: View {
-    @ObservedObject var authViewModel: AuthViewModel
-    
-    var body: some View {
-        NavigationStack {
-            List {
-                Section(header: Text("Аккаунт")) {
-                    HStack(spacing: 12) {
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showProfileSheet = true
+                    }) {
                         if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
                             AsyncImage(url: url) { image in
                                 image
@@ -812,21 +828,65 @@ struct SettingsTab: View {
                                     .aspectRatio(contentMode: .fill)
                             } placeholder: {
                                 Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 40))
+                                    .font(.title2)
                                     .foregroundColor(.blue)
                             }
-                            .frame(width: 44, height: 44)
+                            .frame(width: 32, height: 32)
                             .clipShape(Circle())
                         } else {
                             Image(systemName: "person.crop.circle.fill")
-                                .font(.system(size: 40))
+                                .font(.title2)
                                 .foregroundColor(.blue)
                         }
+                    }
+                }
+            }
+            .sheet(isPresented: $showProfileSheet) {
+                ProfileView(authViewModel: authViewModel)
+            }
+        }
+    }
+}
+
+// MARK: - Profile View
+struct ProfileView: View {
+    @ObservedObject var authViewModel: AuthViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Spacer()
+                            if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
+                                AsyncImage(url: url) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Image(systemName: "person.crop.circle.fill")
+                                        .font(.system(size: 80))
+                                        .foregroundColor(.blue)
+                                }
+                                .frame(width: 80, height: 80)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .font(.system(size: 80))
+                                    .foregroundColor(.blue)
+                                    .frame(width: 80, height: 80)
+                            }
+                            Spacer()
+                        }
                         
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(spacing: 4) {
                             if let name = authViewModel.userProfile?.name {
                                 Text(name)
-                                    .font(.headline)
+                                    .font(.title3)
+                                    .fontWeight(.bold)
                             }
                             Text(authViewModel.userProfile?.email ?? "")
                                 .font(.subheadline)
@@ -835,15 +895,17 @@ struct SettingsTab: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
-                                    .font(.caption2)
+                                    .font(.caption)
                                 Text("\(authViewModel.userProfile?.provider.rawValue ?? "Google") Синхронизация")
-                                    .font(.caption2)
+                                    .font(.caption)
                                     .foregroundColor(.green)
                             }
+                            .padding(.top, 4)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
                 }
+                .listRowBackground(Color.clear)
                 
                 Section(header: Text("Настройки")) {
                     Toggle(isOn: .constant(false)) {
@@ -902,6 +964,14 @@ struct SettingsTab: View {
                 }
             }
             .navigationTitle("Профиль")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
