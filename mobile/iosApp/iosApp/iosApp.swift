@@ -113,33 +113,63 @@ struct ContentView: View {
     @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: Binding(
-            get: { selectedTab },
-            set: { newValue in
-                if newValue != 2 {
-                    selectedTab = newValue
+        ZStack(alignment: .bottom) {
+            TabView(selection: Binding(
+                get: { selectedTab },
+                set: { newValue in
+                    if newValue != 2 {
+                        selectedTab = newValue
+                    }
                 }
+            )) {
+                OverviewTab(authViewModel: authViewModel)
+                    .tabItem {
+                        Label("Обзор", systemImage: "chart.pie.fill")
+                    }
+                    .tag(0)
+                
+                CalculatorTab(authViewModel: authViewModel)
+                    .tabItem {
+                        Label("Вычисления", systemImage: "function")
+                    }
+                    .tag(1)
+                
+                Color.clear
+                    .tabItem {
+                        Text("")
+                    }
+                    .tag(2)
             }
-        )) {
-            OverviewTab(authViewModel: authViewModel)
-                .tabItem {
-                    Label("Обзор", systemImage: "chart.pie.fill")
-                }
-                .tag(0)
+            .tint(.blue)
             
-            CalculatorTab(authViewModel: authViewModel)
-                .tabItem {
-                    Label("Вычисления", systemImage: "function")
+            // Magic Action Button overlaid natively over the 3rd tab slot
+            GeometryReader { geometry in
+                let width = geometry.size.width
+                let safeAreaBottom = geometry.safeAreaInsets.bottom
+                
+                Button(action: {}) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.3))
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1.5)
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                        )
                 }
-                .tag(1)
-            
-            Color.clear
-                .tabItem {
-                    Label("Волшебство", systemImage: "wand.and.stars")
-                }
-                .tag(2)
+                .disabled(true)
+                .position(
+                    x: width * 5/6,
+                    y: geometry.size.height - safeAreaBottom - 24.5
+                )
+            }
+            .ignoresSafeArea()
         }
-        .tint(.blue)
     }
 }
 
