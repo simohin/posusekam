@@ -113,108 +113,33 @@ struct ContentView: View {
     @State private var selectedTab = 0
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Tab contents with state preservation
-            ZStack {
-                OverviewTab(authViewModel: authViewModel)
-                    .opacity(selectedTab == 0 ? 1 : 0)
-                    .disabled(selectedTab != 0)
-                
-                CalculatorTab(authViewModel: authViewModel)
-                    .opacity(selectedTab == 1 ? 1 : 0)
-                    .disabled(selectedTab != 1)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            // Custom floating tab bar (integrated with the magic button)
-            CustomFloatingTabBar(selectedTab: $selectedTab)
-        }
-    }
-}
-
-struct CustomFloatingTabBar: View {
-    @Binding var selectedTab: Int
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Main tabs capsule container
-            HStack(spacing: 0) {
-                // Tab 0: Обзор
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        selectedTab = 0
-                    }
-                }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "chart.pie.fill")
-                            .font(.system(size: 20))
-                        Text("Обзор")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .foregroundColor(selectedTab == 0 ? .blue : .white)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(selectedTab == 0 ? Color.white.opacity(0.12) : Color.clear)
-                    )
+        TabView(selection: Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue != 2 {
+                    selectedTab = newValue
                 }
-                .padding(.leading, 8)
-                .padding(.vertical, 6)
-                
-                // Tab 1: Вычисления
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        selectedTab = 1
-                    }
-                }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "function")
-                            .font(.system(size: 20))
-                        Text("Вычисления")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .foregroundColor(selectedTab == 1 ? .blue : .white)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(selectedTab == 1 ? Color.white.opacity(0.12) : Color.clear)
-                    )
+            }
+        )) {
+            OverviewTab(authViewModel: authViewModel)
+                .tabItem {
+                    Label("Обзор", systemImage: "chart.pie.fill")
                 }
-                .padding(.trailing, 8)
-                .padding(.vertical, 6)
-            }
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-            )
-            .overlay(
-                Capsule()
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-            )
+                .tag(0)
             
-            // Magic Action Button (Circle)
-            Button(action: {}) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white.opacity(0.3))
-                    .frame(width: 56, height: 56)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-                    )
-            }
-            .disabled(true)
+            CalculatorTab(authViewModel: authViewModel)
+                .tabItem {
+                    Label("Вычисления", systemImage: "function")
+                }
+                .tag(1)
+            
+            Color.clear
+                .tabItem {
+                    Label("Волшебство", systemImage: "wand.and.stars")
+                }
+                .tag(2)
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 16)
+        .tint(.blue)
     }
 }
 
@@ -334,9 +259,6 @@ struct OverviewTab: View {
                 .padding(.vertical)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 90)
-            }
             .navigationBarTitleDisplayMode(.inline)
             
             // Toolbar containing active household switcher
@@ -907,9 +829,6 @@ struct CalculatorTab: View {
                 }
             }
             .navigationTitle("Вычисления")
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 90)
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
