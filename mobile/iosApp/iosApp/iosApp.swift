@@ -141,7 +141,7 @@ struct CustomFloatingTabBar: View {
             HStack(spacing: 0) {
                 // Tab 0: Обзор
                 Button(action: {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                         selectedTab = 0
                     }
                 }) {
@@ -152,12 +152,11 @@ struct CustomFloatingTabBar: View {
                             .font(.system(size: 11, weight: .medium))
                     }
                     .frame(maxWidth: .infinity)
-                    .foregroundColor(selectedTab == 0 ? .blue : .white.opacity(0.6))
+                    .foregroundColor(selectedTab == 0 ? .blue : .white)
                     .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(selectedTab == 0 ? Color.white.opacity(0.08) : Color.clear)
+                        Capsule()
+                            .fill(selectedTab == 0 ? Color.white.opacity(0.12) : Color.clear)
                     )
                 }
                 .padding(.leading, 8)
@@ -165,7 +164,7 @@ struct CustomFloatingTabBar: View {
                 
                 // Tab 1: Вычисления
                 Button(action: {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                         selectedTab = 1
                     }
                 }) {
@@ -176,12 +175,11 @@ struct CustomFloatingTabBar: View {
                             .font(.system(size: 11, weight: .medium))
                     }
                     .frame(maxWidth: .infinity)
-                    .foregroundColor(selectedTab == 1 ? .blue : .white.opacity(0.6))
+                    .foregroundColor(selectedTab == 1 ? .blue : .white)
                     .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(selectedTab == 1 ? Color.white.opacity(0.08) : Color.clear)
+                        Capsule()
+                            .fill(selectedTab == 1 ? Color.white.opacity(0.12) : Color.clear)
                     )
                 }
                 .padding(.trailing, 8)
@@ -189,8 +187,12 @@ struct CustomFloatingTabBar: View {
             }
             .background(
                 Capsule()
-                    .fill(Color(red: 0.11, green: 0.11, blue: 0.12))
-                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
             )
             
             // Magic Action Button (Circle)
@@ -201,8 +203,12 @@ struct CustomFloatingTabBar: View {
                     .frame(width: 56, height: 56)
                     .background(
                         Circle()
-                            .fill(Color(red: 0.11, green: 0.11, blue: 0.12))
-                            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                            .fill(.ultraThinMaterial)
+                            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
                     )
             }
             .disabled(true)
