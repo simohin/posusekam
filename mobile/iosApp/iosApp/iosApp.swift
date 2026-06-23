@@ -53,8 +53,8 @@ struct OnboardingView: View {
             Image(systemName: "house.circle.fill")
                 .resizable()
                 .frame(width: 100, height: 100)
-                .foregroundColor(.indigo)
-                .shadow(color: .indigo.opacity(0.3), radius: 10, x: 0, y: 5)
+                .foregroundColor(.blue)
+                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
             
             VStack(spacing: 12) {
                 Text("Добро пожаловать!")
@@ -94,7 +94,7 @@ struct OnboardingView: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(Color.indigo)
+                    .background(Color.blue)
                     .cornerRadius(14)
             }
             .disabled(householdName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -132,7 +132,7 @@ struct ContentView: View {
                 }
                 .tag(2)
         }
-        .tint(.indigo)
+        .tint(.blue)
     }
 }
 
@@ -171,7 +171,7 @@ struct OverviewTab: View {
                             }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
-                                    .foregroundColor(.indigo)
+                                    .foregroundColor(.blue)
                             }
                         }
                         .padding(.horizontal)
@@ -189,7 +189,7 @@ struct OverviewTab: View {
                                     showStoreForm = true
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .tint(.indigo)
+                                .tint(.blue)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(30)
@@ -279,7 +279,7 @@ struct OverviewTab: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "house.fill")
-                                .foregroundColor(.indigo)
+                                .foregroundColor(.blue)
                             Text(authViewModel.activeHousehold?.name ?? "Выбрать домовладение")
                                 .font(.headline)
                                 .foregroundColor(.primary)
@@ -761,7 +761,7 @@ struct CalculatorTab: View {
                             Spacer()
                         }
                     }
-                    .listRowBackground(Color.indigo)
+                    .listRowBackground(Color.blue)
                 }
                 
                 if !result.isEmpty {
@@ -769,7 +769,7 @@ struct CalculatorTab: View {
                         Text(result.map { String($0) }.joined(separator: ", "))
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.medium)
-                            .foregroundColor(.indigo)
+                            .foregroundColor(.blue)
                             .padding(.vertical, 8)
                     }
                 }
@@ -782,36 +782,82 @@ struct CalculatorTab: View {
 // MARK: - Settings Tab
 struct SettingsTab: View {
     @ObservedObject var authViewModel: AuthViewModel
-    @State private var notificationsEnabled = true
-    @State private var biometricAuthEnabled = false
     
     var body: some View {
         NavigationStack {
             List {
                 Section(header: Text("Аккаунт")) {
                     HStack(spacing: 12) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 40))
-                            .foregroundColor(.indigo)
+                        if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.blue)
+                            }
+                            .frame(width: 44, height: 44)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.blue)
+                        }
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(authViewModel.userEmail)
-                                .font(.headline)
-                            Text("Google Синхронизация включена")
-                                .font(.caption)
-                                .foregroundColor(.green)
+                            if let name = authViewModel.userProfile?.name {
+                                Text(name)
+                                    .font(.headline)
+                            }
+                            Text(authViewModel.userProfile?.email ?? "")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.caption2)
+                                Text("\(authViewModel.userProfile?.provider.rawValue ?? "Google") Синхронизация")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                            }
                         }
                     }
                     .padding(.vertical, 4)
                 }
                 
                 Section(header: Text("Настройки")) {
-                    Toggle(isOn: $notificationsEnabled) {
-                        Label("Уведомления", systemImage: "bell.fill")
+                    Toggle(isOn: .constant(false)) {
+                        HStack {
+                            Label("Уведомления", systemImage: "bell.fill")
+                            Spacer()
+                            Text("Скоро")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(6)
+                        }
                     }
-                    Toggle(isOn: $biometricAuthEnabled) {
-                        Label("Вход по Face ID", systemImage: "faceid")
+                    .disabled(true)
+                    
+                    Toggle(isOn: .constant(false)) {
+                        HStack {
+                            Label("Вход по Face ID", systemImage: "faceid")
+                            Spacer()
+                            Text("Скоро")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(6)
+                        }
                     }
+                    .disabled(true)
                 }
                 
                 Section(header: Text("Приложение")) {

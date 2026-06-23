@@ -2,12 +2,36 @@ import SwiftUI
 import shared
 import GoogleSignIn
 
+struct UserProfile {
+    let id: String
+    let email: String
+    let name: String?
+    let avatarUrl: String?
+    let provider: LoginProvider
+    
+    enum LoginProvider: String {
+        case google = "Google"
+        case apple = "Apple"
+        case email = "Email"
+        case unknown = "Неизвестный"
+    }
+}
+
+struct JWTClaims: Codable {
+    let sub: String
+    let email: String
+    let name: String?
+    let picture: String?
+    let iss: String?
+    let provider: String?
+}
+
 @MainActor
 class AuthViewModel: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
-    @Published var userEmail: String = ""
+    @Published var userProfile: UserProfile? = nil
     
     // Households & Stores state
     @Published var households: [shared.Household] = []
@@ -29,7 +53,7 @@ class AuthViewModel: ObservableObject {
         
         self.isAuthenticated = repository.isAuthenticated()
         if self.isAuthenticated {
-            self.userEmail = decodeEmail(from: repository.getAccessToken())
+            self.userProfile = decodeUserProfile(from: repository.getAccessToken())
             // Fetch initial data if already authenticated
             Task {
                 await fetchHouseholds()
@@ -71,7 +95,7 @@ class AuthViewModel: ObservableObject {
                 do {
                     _ = try await self.repository.authenticateWithGoogle(idToken: idToken)
                     self.isLoading = false
-                    self.userEmail = self.decodeEmail(from: self.repository.getAccessToken())
+                    self.userProfile = self.decodeUserProfile(from: self.repository.getAccessToken())
                     self.isAuthenticated = true
                     // Fetch initial data upon login
                     await self.fetchHouseholds()
@@ -86,7 +110,7 @@ class AuthViewModel: ObservableObject {
     
     func logout() {
         repository.logout()
-        self.userEmail = ""
+        self.userProfile = nil
         self.households = []
         self.activeHousehold = nil
         self.stores = []
@@ -249,10 +273,10 @@ class AuthViewModel: ObservableObject {
         return scene.windows.first?.rootViewController
     }
     
-    private func decodeEmail(from token: String?) -> String {
-        guard let token = token else { return "" }
+    private func decodeUserProfile(from token: String?) -> UserProfile? {
+        guard let token = token else { return nil }
         let parts = token.components(separatedBy: ".")
-        guard parts.count > 1 else { return "" }
+        guard parts.count > 1 else { return nil }
         let payloadPart = parts[1]
         
         var base64 = payloadPart
@@ -265,10 +289,31 @@ class AuthViewModel: ObservableObject {
         }
         
         guard let data = Data(base64Encoded: base64),
-              let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-              let email = json["email"] as? String else {
-            return ""
+              let claims = try? JSONDecoder().decode(JWTClaims.self, from: data) else {
+            return nil
         }
-        return email
+        
+        let provider: UserProfile.LoginProvider
+        if let providerClaim = claims.provider {
+            provider = UserProfile.LoginProvider(rawValue: providerClaim) ?? .unknown
+        } else if let issuer = claims.iss {
+            if issuer.contains("google") || claims.email.contains("@gmail.com") {
+                provider = .google
+            } else if issuer.contains("apple") {
+                provider = .apple
+            } else {
+                provider = .email
+            }
+        } else {
+            provider = .unknown
+        }
+        
+        return UserProfile(
+            id: claims.sub,
+            email: claims.email,
+            name: claims.name ?? claims.email.components(separatedBy: "@").first,
+            avatarUrl: claims.picture,
+            provider: provider
+        )
     }
 }

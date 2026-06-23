@@ -2,144 +2,201 @@ import SwiftUI
 
 struct LoginView: View {
     @ObservedObject var viewModel: AuthViewModel
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        ZStack {
-            // Background Sleek Dark Mode with Glow Gradient
-            Color(red: 10/255, green: 11/255, blue: 13/255)
+        NavigationStack {
+            ZStack {
+                // Adaptive Apple system background
+                Color(uiColor: .systemGroupedBackground)
+                    .ignoresSafeArea()
+                
+                // Subtle brand ambient glow
+                VStack {
+                    Circle()
+                        .fill(Color.blue.opacity(colorScheme == .dark ? 0.15 : 0.08))
+                        .frame(width: 350, height: 350)
+                        .blur(radius: 60)
+                        .offset(x: -100, y: -150)
+                    Spacer()
+                    Circle()
+                        .fill(Color.teal.opacity(colorScheme == .dark ? 0.12 : 0.06))
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 50)
+                        .offset(x: 100, y: 150)
+                }
                 .ignoresSafeArea()
-            
-            RadialGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 79/255, green: 70/255, blue: 229/255).opacity(0.12),
-                    Color.clear
-                ]),
-                center: .topLeading,
-                startRadius: 0,
-                endRadius: 500
-            )
-            .ignoresSafeArea()
-            
-            RadialGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 6/255, green: 182/255, blue: 212/255).opacity(0.12),
-                    Color.clear
-                ]),
-                center: .bottomTrailing,
-                startRadius: 0,
-                endRadius: 500
-            )
-            .ignoresSafeArea()
-            
-            // Content
-            VStack(spacing: 30) {
-                Spacer()
                 
-                // Brand Header
-                VStack(spacing: 8) {
-                    Text("POSUSEKAM")
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .tracking(2)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.white, Color(red: 165/255, green: 180/255, blue: 252/255)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                VStack(spacing: 24) {
+                    Spacer()
                     
-                    Text("Сберегай по сусекам")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color.gray.opacity(0.8))
-                }
-                
-                Spacer()
-                
-                // Info Card
-                VStack(alignment: .center, spacing: 20) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color.indigo, Color.cyan],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .padding(.bottom, 10)
-                    
-                    Text("Быстрый и безопасный вход")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                    
-                    Text("Используйте вашу учетную запись Google для мгновенного входа и синхронизации данных.")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                }
-                .padding(30)
-                .background(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color.white.opacity(0.03))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                        )
-                )
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                // Actions & Status Section
-                VStack(spacing: 20) {
-                    if let errorMessage = viewModel.errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                            .transition(.opacity)
-                    }
-                    
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(1.2)
-                    } else {
-                        Button(action: {
-                            viewModel.signInWithGoogle()
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "g.circle.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.white)
-                                
-                                Text("Войти с Google")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
+                    // Brand Header
+                    VStack(spacing: 12) {
+                        Image(systemName: "banknote.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(
                                 LinearGradient(
-                                    colors: [Color(red: 79/255, green: 70/255, blue: 229/255), Color(red: 99/255, green: 102/255, blue: 241/255)],
+                                    colors: [.blue, .teal],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .cornerRadius(14)
-                            .shadow(color: Color(red: 79/255, green: 70/255, blue: 229/255).opacity(0.3), radius: 8, x: 0, y: 4)
-                        }
-                        .padding(.horizontal, 24)
+                            .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                            .padding(.bottom, 8)
+                        
+                        Text("POSUSEKAM")
+                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .tracking(1.5)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [
+                                        colorScheme == .dark ? .white : .black,
+                                        .blue
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        
+                        Text("Сберегай по сусекам")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
                     }
+                    .padding(.bottom, 20)
+                    
+                    // Features / Card styled with Apple HIG Materials
+                    VStack(alignment: .leading, spacing: 18) {
+                        FeatureRow(
+                            icon: "lock.shield.fill",
+                            iconColor: .green,
+                            title: "Безопасный вход",
+                            subtitle: "Авторизация через Google с шифрованием данных"
+                        )
+                        
+                        FeatureRow(
+                            icon: "arrow.triangle.2.circlepath",
+                            iconColor: .blue,
+                            title: "Мгновенная синхронизация",
+                            subtitle: "Ваши накопления доступны на всех устройствах"
+                        )
+                        
+                        FeatureRow(
+                            icon: "chart.pie.fill",
+                            iconColor: .orange,
+                            title: "Умная аналитика",
+                            subtitle: "Отслеживайте цели и прогресс накоплений"
+                        )
+                    }
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.06), radius: 15, x: 0, y: 8)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.primary.opacity(0.04), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 24)
+                    
+                    Spacer()
+                    
+                    // Action Section
+                    VStack(spacing: 16) {
+                        if let errorMessage = viewModel.errorMessage {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                                Text(errorMessage)
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 24)
+                            .transition(.opacity.combined(with: .scale))
+                        }
+                        
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                .scaleEffect(1.2)
+                                .frame(height: 54)
+                        } else {
+                            Button(action: {
+                                withAnimation {
+                                    viewModel.signInWithGoogle()
+                                }
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "g.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("Войти с Google")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.blue, .cyan],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                )
+                                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            }
+                            .buttonStyle(ScaleButtonStyle())
+                            .padding(.horizontal, 24)
+                        }
+                    }
+                    .padding(.bottom, 24)
                 }
-                
-                Spacer()
             }
         }
+    }
+}
+
+// Helper Views for HIG styling
+struct FeatureRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let subtitle: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.white)
+                .frame(width: 40, height: 40)
+                .background(iconColor)
+                .cornerRadius(10)
+                .shadow(color: iconColor.opacity(0.3), radius: 4, x: 0, y: 2)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
