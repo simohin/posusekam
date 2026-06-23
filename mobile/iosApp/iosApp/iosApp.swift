@@ -113,20 +113,41 @@ struct ContentView: View {
     @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            OverviewTab(authViewModel: authViewModel)
-                .tabItem {
-                    Label("Обзор", systemImage: "chart.pie.fill")
-                }
-                .tag(0)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                OverviewTab(authViewModel: authViewModel)
+                    .tabItem {
+                        Label("Обзор", systemImage: "chart.pie.fill")
+                    }
+                    .tag(0)
+                
+                CalculatorTab(authViewModel: authViewModel)
+                    .tabItem {
+                        Label("Вычисления", systemImage: "function")
+                    }
+                    .tag(1)
+            }
+            .tint(.blue)
             
-            CalculatorTab(authViewModel: authViewModel)
-                .tabItem {
-                    Label("Вычисления", systemImage: "function")
-                }
-                .tag(1)
+            // Magic Action Button (Contextual Magic)
+            Button(action: {}) {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color(.systemGray4))
+                    .frame(width: 48, height: 48)
+                    .background(
+                        Circle()
+                            .fill(Color(.systemGray6).opacity(0.8))
+                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                    )
+            }
+            .disabled(true)
+            .padding(.bottom, 2)
         }
-        .tint(.blue)
     }
 }
 
