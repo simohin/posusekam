@@ -136,6 +136,20 @@ struct ContentView: View {
     }
 }
 
+enum StoreSheetType: Identifiable {
+    case create
+    case edit(shared.Store)
+    
+    var id: String {
+        switch self {
+        case .create:
+            return "create"
+        case .edit(let store):
+            return "edit-\(store.id)"
+        }
+    }
+}
+
 // MARK: - Overview Tab
 struct OverviewTab: View {
     @ObservedObject var authViewModel: AuthViewModel
@@ -150,8 +164,7 @@ struct OverviewTab: View {
     @State private var showDeleteHouseholdConfirmation = false
     
     // States for Store Form
-    @State private var showStoreForm = false
-    @State private var selectedStore: shared.Store? = nil
+    @State private var activeStoreSheet: StoreSheetType? = nil
     
     var body: some View {
         NavigationStack {
@@ -166,8 +179,7 @@ struct OverviewTab: View {
                                 .fontWeight(.bold)
                             Spacer()
                             Button(action: {
-                                selectedStore = nil
-                                showStoreForm = true
+                                activeStoreSheet = .create
                             }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
@@ -185,8 +197,7 @@ struct OverviewTab: View {
                                     .font(.headline)
                                     .foregroundColor(.secondary)
                                 Button("Добавить магазин") {
-                                    selectedStore = nil
-                                    showStoreForm = true
+                                    activeStoreSheet = .create
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.blue)
@@ -202,8 +213,7 @@ struct OverviewTab: View {
                                     StoreCard(store: store)
                                         .contextMenu {
                                             Button {
-                                                selectedStore = store
-                                                showStoreForm = true
+                                                activeStoreSheet = .edit(store)
                                             } label: {
                                                 Label("Редактировать", systemImage: "pencil")
                                             }
@@ -329,9 +339,16 @@ struct OverviewTab: View {
             }
             
             // Store Creation / Editing Form Sheet
-            .sheet(isPresented: $showStoreForm) {
-                StoreFormSheet(authViewModel: authViewModel, storeToEdit: selectedStore) {
-                    showStoreForm = false
+            .sheet(item: $activeStoreSheet) { sheetType in
+                switch sheetType {
+                case .create:
+                    StoreFormSheet(authViewModel: authViewModel, storeToEdit: nil) {
+                        activeStoreSheet = nil
+                    }
+                case .edit(let store):
+                    StoreFormSheet(authViewModel: authViewModel, storeToEdit: store) {
+                        activeStoreSheet = nil
+                    }
                 }
             }
         }
