@@ -40,24 +40,41 @@ class AuthViewModel: ObservableObject {
     @Published var isLoadingData: Bool = false
     @Published var metadata: shared.AppMetadataDto? = nil
     
+    // User Settings state
+    @Published var hidePurchaseManagement: Bool = false
+    
+    // User Info state
+    @Published var userInfo: shared.UserInfo? = nil
+    
     private let repository: AuthRepository
     private let householdRepository: HouseholdRepository
     private let storeRepository: StoreRepository
     private let metadataRepository: MetadataRepository
+    private let settingsRepository: SettingsRepository
+    private let userInfoRepository: UserInfoRepository
     
     init(baseUrl: String) {
         self.repository = AuthRepository(baseUrl: baseUrl)
         self.householdRepository = HouseholdRepository(baseUrl: baseUrl)
         self.storeRepository = StoreRepository(baseUrl: baseUrl)
         self.metadataRepository = MetadataRepository(baseUrl: baseUrl)
+        self.settingsRepository = SettingsRepository(baseUrl: baseUrl)
+        self.userInfoRepository = UserInfoRepository(baseUrl: baseUrl)
         
         self.isAuthenticated = repository.isAuthenticated()
+        
+        // Setup observations first
+        setupSettingsObservation()
+        setupUserInfoObservation()
+        
         if self.isAuthenticated {
             self.userProfile = decodeUserProfile(from: repository.getAccessToken())
             // Fetch initial data if already authenticated
             Task {
                 await fetchHouseholds()
                 await fetchMetadata()
+                await loadUserSettings()
+                await loadUserInfo()
             }
         }
     }
@@ -76,6 +93,13 @@ class AuthViewModel: ObservableObject {
             
             let extractedError = error
             let extractedIdToken = signInResult?.user.idToken?.tokenString
+            
+            // Extract profile details
+            let firstName = signInResult?.user.profile?.givenName
+            let lastName = signInResult?.user.profile?.familyName
+            let displayName = signInResult?.user.profile?.name
+            let avatarUrl = signInResult?.user.profile?.imageURL(withDimension: 200)?.absoluteString
+            let providerUserId = signInResult?.user.userID
             
             Task { @MainActor in
                 if let error = extractedError {
@@ -97,9 +121,27 @@ class AuthViewModel: ObservableObject {
                     self.isLoading = false
                     self.userProfile = self.decodeUserProfile(from: self.repository.getAccessToken())
                     self.isAuthenticated = true
+                    
+                    // Sync UserInfo to backend
+                    let info = shared.UserInfo(
+                        firstName: firstName,
+                        lastName: lastName,
+                        displayName: displayName,
+                        avatarUrl: avatarUrl,
+                        providerId: "google",
+                        providerUserId: providerUserId
+                    )
+                    do {
+                        try await self.userInfoRepository.updateUserInfo(newInfo: info)
+                    } catch {
+                        print("Failed to sync user info upon Google Sign In: \(error)")
+                    }
+                    
                     // Fetch initial data upon login
                     await self.fetchHouseholds()
                     await self.fetchMetadata()
+                    await self.loadUserSettings()
+                    await self.loadUserInfo()
                 } catch {
                     self.isLoading = false
                     self.errorMessage = error.localizedDescription
@@ -115,7 +157,73 @@ class AuthViewModel: ObservableObject {
         self.activeHousehold = nil
         self.stores = []
         self.metadata = nil
+        self.hidePurchaseManagement = false
+        self.userInfo = nil
+        self.userInfoRepository.clearLocalCache()
         self.isAuthenticated = false
+    }
+    
+    func loadUserSettings() async {
+        do {
+            try await settingsRepository.loadSettingsFromServer()
+        } catch {
+            print("Failed to load settings from server: \(error)")
+        }
+    }
+    
+    private func setupSettingsObservation() {
+        settingsRepository.observeSettings { [weak self] userSettings in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.hidePurchaseManagement = userSettings.hidePurchaseManagement
+            }
+        }
+    }
+    
+    func updateHidePurchaseManagement(hide: Bool) {
+        Task {
+            let current = UserSettings(hidePurchaseManagement: hide)
+            do {
+                try await settingsRepository.updateSettings(newSettings: current)
+            } catch {
+                print("Failed to update settings: \(error)")
+            }
+        }
+    }
+    
+    func resetUserSettings() {
+        Task {
+            do {
+                try await settingsRepository.resetSettings()
+            } catch {
+                print("Failed to reset settings: \(error)")
+            }
+        }
+    }
+    
+    func loadUserInfo() async {
+        do {
+            try await userInfoRepository.loadUserInfoFromServer()
+        } catch {
+            print("Failed to load user info from server: \(error)")
+        }
+    }
+    
+    private func setupUserInfoObservation() {
+        userInfoRepository.observeUserInfo { [weak self] info in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.userInfo = info
+            }
+        }
+    }
+    
+    func updateUserInfo(newInfo: shared.UserInfo) async {
+        do {
+            try await userInfoRepository.updateUserInfo(newInfo: newInfo)
+        } catch {
+            print("Failed to update user info: \(error)")
+        }
     }
     
     func fetchMetadata() async {
@@ -148,7 +256,7 @@ class AuthViewModel: ObservableObject {
             }
             await fetchStores()
         } catch {
-            self.errorMessage = "Ошибка при загрузке домовладений: \(error.localizedDescription)"
+            self.errorMessage = "Ошибка при загрузке домов: \(error.localizedDescription)"
             if error.localizedDescription.contains("401") {
                 self.logout()
             }
@@ -156,28 +264,28 @@ class AuthViewModel: ObservableObject {
         self.isLoadingData = false
     }
     
-    func createHousehold(name: String) async {
+    func createHousehold(name: String, icon: String? = nil) async {
         self.isLoadingData = true
         self.errorMessage = nil
         do {
-            let newHh = try await householdRepository.createHousehold(name: name)
+            let newHh = try await householdRepository.createHousehold(name: name, icon: icon)
             await fetchHouseholds()
             self.activeHousehold = newHh
             await fetchStores()
         } catch {
-            self.errorMessage = "Не удалось создать домовладение: \(error.localizedDescription)"
+            self.errorMessage = "Не удалось создать дом: \(error.localizedDescription)"
         }
         self.isLoadingData = false
     }
     
-    func updateHousehold(id: String, name: String) async {
+    func updateHousehold(id: String, name: String, icon: String? = nil) async {
         self.isLoadingData = true
         self.errorMessage = nil
         do {
-            _ = try await householdRepository.updateHousehold(id: id, name: name)
+            _ = try await householdRepository.updateHousehold(id: id, name: name, icon: icon)
             await fetchHouseholds()
         } catch {
-            self.errorMessage = "Не удалось обновить домовладение: \(error.localizedDescription)"
+            self.errorMessage = "Не удалось обновить дом: \(error.localizedDescription)"
         }
         self.isLoadingData = false
     }
@@ -192,7 +300,7 @@ class AuthViewModel: ObservableObject {
             }
             await fetchHouseholds()
         } catch {
-            self.errorMessage = "Не удалось удалить домовладение: \(error.localizedDescription)"
+            self.errorMessage = "Не удалось удалить дом: \(error.localizedDescription)"
         }
         self.isLoadingData = false
     }

@@ -6,7 +6,7 @@ echo "=== Deploying db-controller ==="
 IMAGE_TAG="simohin/posusekam-db-controller:latest"
 
 echo "1. Building and pushing Docker image ($IMAGE_TAG) for amd64..."
-docker buildx build --platform linux/amd64 -t $IMAGE_TAG -f db-controller/Dockerfile --push .
+docker buildx build --platform linux/amd64 -t $IMAGE_TAG -f db-controller/Dockerfile --push db-controller
 
 echo "2. Deploying via Helm..."
 # Используем upgrade --install для бесшовного обновления существующего релиза

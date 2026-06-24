@@ -17,6 +17,7 @@ pluginManagement {
 rootProject.name = "posusekam"
 include(":db-controller")
 include(":auth-service")
+include(":backend-service")
 include(":models")
 include(":core")
 

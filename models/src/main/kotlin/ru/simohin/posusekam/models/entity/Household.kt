@@ -14,6 +14,9 @@ data class Household(
     @Column(nullable = false)
     var name: String,
 
+    @Column(nullable = true)
+    var icon: String? = null,
+
     @Column(name = "created_at", insertable = false, updatable = false)
     val createdAt: ZonedDateTime? = null
 )

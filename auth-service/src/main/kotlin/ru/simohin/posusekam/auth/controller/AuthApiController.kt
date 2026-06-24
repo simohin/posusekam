@@ -10,11 +10,14 @@ import ru.simohin.posusekam.authservice.api.GoogleAuthApi
 import ru.simohin.posusekam.authservice.dto.AuthResponse
 import ru.simohin.posusekam.authservice.dto.GoogleAuthRequest
 import ru.simohin.posusekam.models.entity.User
+import ru.simohin.posusekam.models.entity.UserInfo
+import ru.simohin.posusekam.auth.repository.UserInfoRepository
 
 @RestController
 class AuthApiController(
     private val googleAuthService: GoogleAuthService,
     private val userRepository: UserRepository,
+    private val userInfoRepository: UserInfoRepository,
     private val tokenService: TokenService
 ) : GoogleAuthApi {
 
@@ -69,6 +72,25 @@ class AuthApiController(
         }
 
         val userId = user.id ?: return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
+
+        // Автозаполнение UserInfo из токена Google провайдера
+        val firstName = payload["given_name"] as? String
+        val lastName = payload["family_name"] as? String
+        val displayName = payload["name"] as? String
+        val avatarUrl = payload["picture"] as? String
+
+        val userInfo = userInfoRepository.findById(userId).orElseGet {
+            UserInfo(userId = userId, info = emptyMap())
+        }
+        val currentInfo = userInfo.info.toMutableMap()
+        if (firstName != null) currentInfo["firstName"] = firstName
+        if (lastName != null) currentInfo["lastName"] = lastName
+        if (displayName != null) currentInfo["displayName"] = displayName
+        if (avatarUrl != null) currentInfo["avatarUrl"] = avatarUrl
+        currentInfo["providerId"] = "google"
+        currentInfo["providerUserId"] = googleId
+        userInfo.info = currentInfo
+        userInfoRepository.save(userInfo)
 
         val accessToken = tokenService.generateAccessToken(userId, user.email)
         val refreshToken = tokenService.generateRefreshToken(userId)

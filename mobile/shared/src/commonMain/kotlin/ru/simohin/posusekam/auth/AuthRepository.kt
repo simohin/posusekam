@@ -37,6 +37,7 @@ class AuthRepository(
         private const val KEY_REFRESH_TOKEN = "refresh_token"
     }
 
+    @Throws(Exception::class)
     suspend fun authenticateWithGoogle(idToken: String): AuthResponse {
         val response: HttpResponse = client.post("$baseUrl/auth/v1/google") {
             contentType(ContentType.Application.Json)

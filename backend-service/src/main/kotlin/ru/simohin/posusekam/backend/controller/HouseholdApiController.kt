@@ -39,7 +39,10 @@ class HouseholdApiController(
         val user = userRepository.findById(userId).orElse(null)
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
 
-        val household = Household(name = createHouseholdRequest.name)
+        val household = Household(
+            name = createHouseholdRequest.name,
+            icon = createHouseholdRequest.icon
+        )
         val savedHousehold = householdRepository.save(household)
 
         val membership = HouseholdMember(
@@ -63,6 +66,7 @@ class HouseholdApiController(
             ?: return ResponseEntity.notFound().build()
 
         household.name = updateHouseholdRequest.name
+        household.icon = updateHouseholdRequest.icon
         val saved = householdRepository.save(household)
 
         return ResponseEntity.ok(toDto(saved))
@@ -95,6 +99,7 @@ class HouseholdApiController(
         return HouseholdDto()
             .id(household.id)
             .name(household.name)
+            .icon(household.icon)
             .createdAt(household.createdAt?.let { OffsetDateTime.ofInstant(it.toInstant(), ZoneOffset.UTC) })
     }
 }

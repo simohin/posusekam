@@ -32,16 +32,12 @@ struct LoginView: View {
                     
                     // Brand Header
                     VStack(spacing: 12) {
-                        Image(systemName: "banknote.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.blue, .teal],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                        Image("LoginHero")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 110, height: 110)
+                            .cornerRadius(24)
+                            .shadow(color: .blue.opacity(0.25), radius: 8, x: 0, y: 4)
                             .padding(.bottom, 8)
                         
                         Text("POSUSEKAM")

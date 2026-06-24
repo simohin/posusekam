@@ -15,4 +15,6 @@ dependencies {
     
     // Аннотации Jackson для будущих DTO
     api("com.fasterxml.jackson.core:jackson-annotations:2.17.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.1")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.1")
 }

@@ -60,7 +60,7 @@ struct OnboardingView: View {
                 Text("Добро пожаловать!")
                     .font(.title)
                     .fontWeight(.bold)
-                Text("Для начала работы необходимо создать ваше первое домовладение (например, 'Квартира' или 'Дача'), где будут располагаться магазины и товары.")
+                Text("Для начала работы необходимо создать ваш первый дом (например, 'Квартира' или 'Дача'), где будут располагаться магазины и товары.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -68,7 +68,7 @@ struct OnboardingView: View {
             }
             
             VStack(alignment: .leading, spacing: 8) {
-                Text("Название домовладения")
+                Text("Название дома")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.secondary)
@@ -88,7 +88,7 @@ struct OnboardingView: View {
                     await authViewModel.createHousehold(name: householdName)
                 }
             }) {
-                Text("Создать домовладение")
+                Text("Создать дом")
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding()
@@ -111,64 +111,38 @@ struct OnboardingView: View {
 struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @State private var selectedTab = 0
+    @State private var showMagicAlert = false
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: Binding(
-                get: { selectedTab },
-                set: { newValue in
-                    if newValue != 2 {
-                        selectedTab = newValue
-                    }
+        let tabBinding = Binding<Int>(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == 2 {
+                    showMagicAlert = true
+                } else {
+                    selectedTab = newValue
                 }
-            )) {
+            }
+        )
+        
+        TabView(selection: tabBinding) {
+            Tab("Обзор", systemImage: "chart.pie.fill", value: 0) {
                 OverviewTab(authViewModel: authViewModel)
-                    .tabItem {
-                        Label("Обзор", systemImage: "chart.pie.fill")
-                    }
-                    .tag(0)
-                
-                CalculatorTab(authViewModel: authViewModel)
-                    .tabItem {
-                        Label("Вычисления", systemImage: "function")
-                    }
-                    .tag(1)
-                
-                Color.clear
-                    .tabItem {
-                        Text("")
-                    }
-                    .tag(2)
             }
-            .tint(.blue)
             
-            // Magic Action Button overlaid natively over the 3rd tab slot
-            GeometryReader { geometry in
-                let width = geometry.size.width
-                let safeAreaBottom = geometry.safeAreaInsets.bottom
-                
-                Button(action: {}) {
-                    Image(systemName: "wand.and.stars")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.3))
-                        .frame(width: 40, height: 40)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1.5)
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                        )
-                }
-                .disabled(true)
-                .position(
-                    x: width * 5/6,
-                    y: geometry.size.height - safeAreaBottom - 24.5
-                )
+            Tab("Вычисления", systemImage: "function", value: 1) {
+                CalculatorTab(authViewModel: authViewModel)
             }
-            .ignoresSafeArea()
+            
+            Tab("Магия", systemImage: "wand.and.stars.inverse", value: 2, role: .search) {
+                Color.clear
+            }
+        }
+        .tint(.blue)
+        .alert("Волшебная функция", isPresented: $showMagicAlert) {
+            Button("ОК", role: .cancel) {}
+        } message: {
+            Text("Скоро здесь появится интеллектуальный подбор действий и управление покупками с помощью ИИ!")
         }
     }
 }
@@ -177,6 +151,8 @@ enum OverviewSheetType: Identifiable {
     case createStore
     case editStore(shared.Store)
     case profile
+    case createHousehold
+    case editHousehold(shared.Household)
     
     var id: String {
         switch self {
@@ -186,6 +162,10 @@ enum OverviewSheetType: Identifiable {
             return "editStore-\(store.id)"
         case .profile:
             return "profile"
+        case .createHousehold:
+            return "createHousehold"
+        case .editHousehold(let household):
+            return "editHousehold-\(household.id)"
         }
     }
 }
@@ -195,12 +175,6 @@ struct OverviewTab: View {
     @ObservedObject var authViewModel: AuthViewModel
     
     // States for Alerts
-    @State private var showCreateHouseholdAlert = false
-    @State private var newHouseholdName = ""
-    
-    @State private var showEditHouseholdAlert = false
-    @State private var editingHouseholdName = ""
-    
     @State private var showDeleteHouseholdConfirmation = false
     
     // States for Sheets
@@ -211,10 +185,10 @@ struct OverviewTab: View {
             ScrollView {
                 VStack(spacing: 24) {
                     
-                    // First Block: Мои сусеки (Магазины)
+                    // First Block: Мои магазины (Магазины)
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("Мои сусеки")
+                            Text("Мои магазины")
                                 .font(.title2)
                                 .fontWeight(.bold)
                             Spacer()
@@ -233,7 +207,7 @@ struct OverviewTab: View {
                                 Image(systemName: "storefront")
                                     .font(.system(size: 44))
                                     .foregroundColor(.secondary.opacity(0.8))
-                                Text("В этом домовладении еще нет магазинов")
+                                Text("В этом доме еще нет магазинов")
                                     .font(.headline)
                                     .foregroundColor(.secondary)
                                 Button("Добавить магазин") {
@@ -272,19 +246,43 @@ struct OverviewTab: View {
                         }
                     }
                     
+                    
                     // Info Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Управление покупками")
-                            .font(.headline)
-                        Text("В каждом магазине хранится собственный каталог продуктов и запасов. Категории и теги создаются в рамках домовладения и могут применяться к любым продуктам.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    if !authViewModel.hidePurchaseManagement {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Text("Управление покупками")
+                                    .font(.headline)
+                                Spacer()
+                                Button(action: {
+                                    authViewModel.updateHidePurchaseManagement(hide: true)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                        .font(.title3)
+                                }
+                            }
+                            
+                            Text("В каждом магазине хранится собственный каталог продуктов и запасов. Категории и теги создаются в рамках дома и могут применяться к любым продуктам.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            Button(action: {
+                                authViewModel.updateHidePurchaseManagement(hide: true)
+                            }) {
+                                Text("Не показывать больше")
+                                    .font(.footnote)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.blue)
+                            }
+                            .padding(.top, 4)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .cornerRadius(20)
+                        .padding(.horizontal)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .cornerRadius(20)
-                    .padding(.horizontal)
                 }
                 .padding(.vertical)
             }
@@ -296,41 +294,56 @@ struct OverviewTab: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         ForEach(authViewModel.households, id: \.id) { hh in
-                            Button(action: {
-                                authViewModel.selectHousehold(hh)
-                            }) {
-                                HStack {
-                                    Text(hh.name)
-                                    if hh.id == authViewModel.activeHousehold?.id {
-                                        Image(systemName: "checkmark")
+                            Group {
+                                if let icon = hh.icon, isEmoji(icon) {
+                                    Button(action: {
+                                        authViewModel.selectHousehold(hh)
+                                    }) {
+                                        Text("\(icon)  \(hh.name)\(hh.id == authViewModel.activeHousehold?.id ? " ✓" : "")")
+                                    }
+                                } else {
+                                    Button(action: {
+                                        authViewModel.selectHousehold(hh)
+                                    }) {
+                                        Label("\(hh.name)\(hh.id == authViewModel.activeHousehold?.id ? " ✓" : "")", systemImage: hh.icon ?? "house.fill")
                                     }
                                 }
                             }
                         }
                         Divider()
                         Button(action: {
-                            showCreateHouseholdAlert = true
+                            activeSheet = .createHousehold
                         }) {
-                            Label("Создать домовладение...", systemImage: "plus")
+                            Label("Создать дом...", systemImage: "plus")
                         }
                         if let active = authViewModel.activeHousehold {
                             Button(action: {
-                                editingHouseholdName = active.name
-                                showEditHouseholdAlert = true
+                                activeSheet = .editHousehold(active)
                             }) {
-                                Label("Переименовать домовладение...", systemImage: "pencil")
+                                Label("Редактировать дом...", systemImage: "pencil")
                             }
                             Button(role: .destructive, action: {
                                 showDeleteHouseholdConfirmation = true
                             }) {
-                                Label("Удалить домовладение", systemImage: "trash")
+                                Label("Удалить дом", systemImage: "trash")
                             }
                         }
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "house.fill")
-                                .foregroundColor(.blue)
-                            Text(authViewModel.activeHousehold?.name ?? "Выбрать домовладение")
+                            Group {
+                                if let icon = authViewModel.activeHousehold?.icon {
+                                    if isEmoji(icon) {
+                                        Text(icon)
+                                    } else {
+                                        Image(systemName: icon)
+                                            .foregroundColor(.blue)
+                                    }
+                                } else {
+                                    Image(systemName: "house.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            Text(authViewModel.activeHousehold?.name ?? "Выбрать дом")
                                 .font(.headline)
                                 .foregroundColor(.primary)
                             Image(systemName: "chevron.down")
@@ -343,52 +356,32 @@ struct OverviewTab: View {
                     Button(action: {
                         activeSheet = .profile
                     }) {
-                        if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
+                        let finalAvatarUrl = authViewModel.userInfo?.avatarUrl ?? authViewModel.userProfile?.avatarUrl
+                        if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
                             AsyncImage(url: url) { image in
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                             } placeholder: {
                                 Image(systemName: "person.crop.circle.fill")
-                                    .font(.title2)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
                                     .foregroundColor(.blue)
                             }
                             .frame(width: 32, height: 32)
                             .clipShape(Circle())
                         } else {
                             Image(systemName: "person.crop.circle.fill")
-                                .font(.title2)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
                                 .foregroundColor(.blue)
+                                .frame(width: 32, height: 32)
                         }
                     }
                 }
             }
             
-            // Households Alerts
-            .alert("Новое домовладение", isPresented: $showCreateHouseholdAlert) {
-                TextField("Название", text: $newHouseholdName)
-                Button("Создать") {
-                    Task {
-                        await authViewModel.createHousehold(name: newHouseholdName)
-                        newHouseholdName = ""
-                    }
-                }
-                Button("Отмена", role: .cancel) {}
-            }
-            
-            .alert("Переименовать домовладение", isPresented: $showEditHouseholdAlert) {
-                TextField("Название", text: $editingHouseholdName)
-                Button("Сохранить") {
-                    if let active = authViewModel.activeHousehold {
-                        Task {
-                            await authViewModel.updateHousehold(id: active.id, name: editingHouseholdName)
-                        }
-                    }
-                }
-                Button("Отмена", role: .cancel) {}
-            }
-            
-            .alert("Удалить домовладение?", isPresented: $showDeleteHouseholdConfirmation) {
+            .alert("Удалить дом?", isPresented: $showDeleteHouseholdConfirmation) {
                 Button("Удалить", role: .destructive) {
                     if let active = authViewModel.activeHousehold {
                         Task {
@@ -398,7 +391,7 @@ struct OverviewTab: View {
                 }
                 Button("Отмена", role: .cancel) {}
             } message: {
-                Text("Это удалит домовладение и все связанные магазины и продукты.")
+                Text("Это удалит дом и все связанные магазины и продукты.")
             }
             
             // Sheets presentation (Store Form & Profile)
@@ -414,6 +407,94 @@ struct OverviewTab: View {
                     }
                 case .profile:
                     ProfileView(authViewModel: authViewModel)
+                case .createHousehold:
+                    HouseholdFormSheet(authViewModel: authViewModel, householdToEdit: nil) {
+                        activeSheet = nil
+                    }
+                case .editHousehold(let household):
+                    HouseholdFormSheet(authViewModel: authViewModel, householdToEdit: household) {
+                        activeSheet = nil
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Household Form Sheet
+struct HouseholdFormSheet: View {
+    @ObservedObject var authViewModel: AuthViewModel
+    let householdToEdit: shared.Household?
+    let onDismiss: () -> Void
+    
+    @State private var name: String = ""
+    @State private var selectedIcon: String = "house.fill"
+    @State private var showIconPicker = false
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Основная информация")) {
+                    TextField("Название дома", text: $name)
+                }
+                
+                Section(header: Text("Оформление")) {
+                    Button(action: {
+                        showIconPicker = true
+                    }) {
+                        HStack {
+                            Text("Выбрать иконку")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Group {
+                                if isEmoji(selectedIcon) {
+                                    Text(selectedIcon)
+                                        .font(.system(size: 24))
+                                } else {
+                                    Image(systemName: selectedIcon)
+                                        .font(.title3)
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .frame(width: 44, height: 44)
+                            .background(Color.blue)
+                            .cornerRadius(12)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle(householdToEdit == nil ? "Новый дом" : "Редактировать дом")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Отмена") {
+                        onDismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(householdToEdit == nil ? "Добавить" : "Сохранить") {
+                        Task {
+                            if let hh = householdToEdit {
+                                await authViewModel.updateHousehold(id: hh.id, name: name, icon: selectedIcon)
+                            } else {
+                                await authViewModel.createHousehold(name: name, icon: selectedIcon)
+                            }
+                            onDismiss()
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .sheet(isPresented: $showIconPicker) {
+                IconPickerView(selectedIcon: $selectedIcon, selectedColor: .blue, metadata: authViewModel.metadata)
+            }
+            .onAppear {
+                if let hh = householdToEdit {
+                    name = hh.name
+                    selectedIcon = hh.icon ?? "house.fill"
                 }
             }
         }
@@ -754,16 +835,10 @@ struct StoreCard: View {
                 Spacer()
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(store.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                Text("Сусек с товарами")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text(store.name)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .lineLimit(1)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -864,7 +939,8 @@ struct CalculatorTab: View {
                     Button(action: {
                         showProfileSheet = true
                     }) {
-                        if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
+                        let finalAvatarUrl = authViewModel.userInfo?.avatarUrl ?? authViewModel.userProfile?.avatarUrl
+                        if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
                             AsyncImage(url: url) { image in
                                 image
                                     .resizable()
@@ -895,15 +971,29 @@ struct CalculatorTab: View {
 struct ProfileView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showResetSuccessAlert = false
     
     var body: some View {
         NavigationStack {
             List {
                 Section {
+                    let finalAvatarUrl = authViewModel.userInfo?.avatarUrl ?? authViewModel.userProfile?.avatarUrl
+                    let finalName: String = {
+                        if let displayName = authViewModel.userInfo?.displayName, !displayName.isEmpty {
+                            return displayName
+                        }
+                        if let first = authViewModel.userInfo?.firstName, !first.isEmpty {
+                            let last = authViewModel.userInfo?.lastName ?? ""
+                            let full = "\(first) \(last)".trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !full.isEmpty { return full }
+                        }
+                        return authViewModel.userProfile?.name ?? "Пользователь"
+                    }()
+                    
                     VStack(spacing: 12) {
                         HStack {
                             Spacer()
-                            if let avatarUrl = authViewModel.userProfile?.avatarUrl, let url = URL(string: avatarUrl) {
+                            if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
                                 AsyncImage(url: url) { image in
                                     image
                                         .resizable()
@@ -926,11 +1016,9 @@ struct ProfileView: View {
                         }
                         
                         VStack(spacing: 4) {
-                            if let name = authViewModel.userProfile?.name {
-                                Text(name)
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                            }
+                            Text(finalName)
+                                .font(.title3)
+                                .fontWeight(.bold)
                             Text(authViewModel.userProfile?.email ?? "")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -980,6 +1068,14 @@ struct ProfileView: View {
                         }
                     }
                     .disabled(true)
+                    
+                    Button(action: {
+                        authViewModel.resetUserSettings()
+                        showResetSuccessAlert = true
+                    }) {
+                        Label("Сбросить настройки", systemImage: "arrow.counterclockwise.circle")
+                            .foregroundColor(.red)
+                    }
                 }
                 
                 Section(header: Text("Приложение")) {
@@ -1014,6 +1110,11 @@ struct ProfileView: View {
                         dismiss()
                     }
                 }
+            }
+            .alert("Сброс выполнен", isPresented: $showResetSuccessAlert) {
+                Button("ОК", role: .cancel) {}
+            } message: {
+                Text("Все настройки успешно сброшены до значений по умолчанию.")
             }
         }
     }

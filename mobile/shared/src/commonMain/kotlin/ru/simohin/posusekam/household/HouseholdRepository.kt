@@ -46,12 +46,12 @@ class HouseholdRepository(
     }
 
     @Throws(Exception::class)
-    suspend fun createHousehold(name: String): Household {
+    suspend fun createHousehold(name: String, icon: String? = null): Household {
         val token = getAccessToken() ?: throw Exception("Unauthorized: No access token")
         val response = client.post("$baseUrl/api/v1/households") {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $token")
-            setBody(CreateHouseholdRequest(name))
+            setBody(CreateHouseholdRequest(name, icon))
         }
         if (response.status.value in 200..299) {
             return json.decodeFromString<Household>(response.bodyAsText())
@@ -61,12 +61,12 @@ class HouseholdRepository(
     }
 
     @Throws(Exception::class)
-    suspend fun updateHousehold(id: String, name: String): Household {
+    suspend fun updateHousehold(id: String, name: String, icon: String? = null): Household {
         val token = getAccessToken() ?: throw Exception("Unauthorized: No access token")
         val response = client.put("$baseUrl/api/v1/households/$id") {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $token")
-            setBody(UpdateHouseholdRequest(name))
+            setBody(UpdateHouseholdRequest(name, icon))
         }
         if (response.status.value in 200..299) {
             return json.decodeFromString<Household>(response.bodyAsText())
