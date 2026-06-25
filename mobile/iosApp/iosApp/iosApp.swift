@@ -213,27 +213,36 @@ struct ContentView: View {
                         activeSheet = .profile
                     }) {
                         let finalAvatarUrl = authViewModel.userInfo?.avatarUrl ?? authViewModel.userProfile?.avatarUrl
-                        if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
-                            AsyncImage(url: url) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            } placeholder: {
+                        Group {
+                            if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 32, height: 32)
+                                            .clipShape(Circle())
+                                    case .failure, .empty:
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 32, height: 32)
+                                            .foregroundColor(.blue)
+                                    @unknown default:
+                                        EmptyView()
+                                    }
+                                }
+                            } else {
                                 Image(systemName: "person.crop.circle.fill")
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .foregroundColor(.blue)
+                                    .frame(width: 32, height: 32)
                             }
-                            .frame(width: 32, height: 32)
-                            .clipShape(Circle())
-                        } else {
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .foregroundColor(.blue)
-                                .frame(width: 32, height: 32)
                         }
                     }
+                    .buttonStyle(.plain)
                 }
             }
             
@@ -962,21 +971,29 @@ struct ProfileView: View {
                         HStack {
                             Spacer()
                             if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
-                                AsyncImage(url: url) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .font(.system(size: 80))
-                                        .foregroundColor(.blue)
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 80, height: 80)
+                                            .clipShape(Circle())
+                                    case .failure, .empty:
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 80, height: 80)
+                                            .foregroundColor(.blue)
+                                    @unknown default:
+                                        EmptyView()
+                                    }
                                 }
-                                .frame(width: 80, height: 80)
-                                .clipShape(Circle())
                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                             } else {
                                 Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 80))
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
                                     .foregroundColor(.blue)
                                     .frame(width: 80, height: 80)
                             }
