@@ -22,6 +22,11 @@ podAnnotations:
     {{- with secret "secret/data/posusekam/auth-service" -}}
     {{ .Data.data.public_key }}
     {{- end -}}
+  vault.hashicorp.com/agent-inject-secret-application.properties: "secret/data/posusekam/auth-service"
+  vault.hashicorp.com/agent-inject-template-application.properties: |
+    {{- with secret "secret/data/posusekam/auth-service" -}}
+    spring.ai.openai.api-key={{ .Data.data.openai_api_key }}
+    {{- end -}}
 
 podLabels: {}
 podSecurityContext: {}

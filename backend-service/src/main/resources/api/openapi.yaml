@@ -306,6 +306,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserInfoDto'
 
+  /v1/ai/generate-products:
+    post:
+      tags:
+        - AI
+      summary: Сгенерировать список продуктов с помощью ИИ
+      operationId: generateProducts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateProductsRequest'
+      responses:
+        '200':
+          description: Сгенерированный список продуктов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreProductsResponse'
+
 components:
   schemas:
     HouseholdDto:
@@ -465,4 +485,45 @@ components:
         info:
           type: object
           additionalProperties: true
+
+    GenerateProductsRequest:
+      type: object
+      required:
+        - storeDescription
+      properties:
+        storeDescription:
+          type: string
+        itemsCount:
+          type: integer
+
+    StoreProductsResponse:
+      type: object
+      required:
+        - store_type
+        - products
+      properties:
+        store_type:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiProductResponse'
+
+    AiProductResponse:
+      type: object
+      required:
+        - name
+        - measureUnit
+        - category
+        - description
+      properties:
+        name:
+          type: string
+        measureUnit:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+
 
