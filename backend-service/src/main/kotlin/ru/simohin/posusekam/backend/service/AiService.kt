@@ -15,8 +15,8 @@ interface AiService {
      */
     fun generateProductsList(
         storeDescription: String,
-        allowedCategories: List<ProductCategory>,
-        allowedUnits: List<ProductMeasureUnit>,
+        allowedCategories: List<String>,
+        allowedUnits: List<String>,
         itemsCount: Int
     ): StoreProductsResponse
 }

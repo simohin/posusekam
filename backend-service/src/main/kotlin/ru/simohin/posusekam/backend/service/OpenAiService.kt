@@ -26,8 +26,8 @@ class OpenAiService(
 
     override fun generateProductsList(
         storeDescription: String,
-        allowedCategories: List<ProductCategory>,
-        allowedUnits: List<ProductMeasureUnit>,
+        allowedCategories: List<String>,
+        allowedUnits: List<String>,
         itemsCount: Int
     ): StoreProductsResponse {
         // 1. Извлекаем промпт из БД по имени

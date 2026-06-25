@@ -6,15 +6,21 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.RestController
+import ru.simohin.posusekam.backend.repository.CategoryRepository
 import ru.simohin.posusekam.backend.repository.HouseholdMemberRepository
 import ru.simohin.posusekam.backend.repository.HouseholdRepository
+import ru.simohin.posusekam.backend.repository.MeasureUnitRepository
 import ru.simohin.posusekam.backend.repository.UserRepository
+import ru.simohin.posusekam.backend.service.ProductCategory
+import ru.simohin.posusekam.backend.service.ProductMeasureUnit
 import ru.simohin.posusekam.backendservice.api.HouseholdsApi
 import ru.simohin.posusekam.backendservice.dto.CreateHouseholdRequest
 import ru.simohin.posusekam.backendservice.dto.HouseholdDto
 import ru.simohin.posusekam.backendservice.dto.UpdateHouseholdRequest
+import ru.simohin.posusekam.models.entity.Category
 import ru.simohin.posusekam.models.entity.Household
 import ru.simohin.posusekam.models.entity.HouseholdMember
+import ru.simohin.posusekam.models.entity.MeasureUnit
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -23,7 +29,9 @@ import java.util.UUID
 class HouseholdApiController(
     private val householdRepository: HouseholdRepository,
     private val householdMemberRepository: HouseholdMemberRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val categoryRepository: CategoryRepository,
+    private val measureUnitRepository: MeasureUnitRepository
 ) : HouseholdsApi {
 
     override fun listHouseholds(): ResponseEntity<List<HouseholdDto>> {
@@ -51,6 +59,16 @@ class HouseholdApiController(
             role = "owner"
         )
         householdMemberRepository.save(membership)
+
+        val defaultCategories = ProductCategory.values().map {
+            Category(household = savedHousehold, name = it.value)
+        }
+        categoryRepository.saveAll(defaultCategories)
+
+        val defaultUnits = ProductMeasureUnit.values().map {
+            MeasureUnit(household = savedHousehold, name = it.value)
+        }
+        measureUnitRepository.saveAll(defaultUnits)
 
         return ResponseEntity.ok(toDto(savedHousehold))
     }

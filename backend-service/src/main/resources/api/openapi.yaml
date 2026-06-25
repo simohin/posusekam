@@ -490,11 +490,15 @@ components:
       type: object
       required:
         - storeDescription
+        - householdId
       properties:
         storeDescription:
           type: string
         itemsCount:
           type: integer
+        householdId:
+          type: string
+          format: uuid
 
     StoreProductsResponse:
       type: object
