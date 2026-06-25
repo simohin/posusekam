@@ -27,4 +27,4 @@ posusekam:
   jwt:
     public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:certs/public.pem}
   ai:
-    default-items-count: ${AI_DEFAULT_ITEMS_COUNT:4}
+    default-items-count: ${AI_DEFAULT_ITEMS_COUNT:10}

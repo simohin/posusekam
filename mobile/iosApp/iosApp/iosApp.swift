@@ -280,6 +280,8 @@ struct ContentView: View {
                     HouseholdFormSheet(authViewModel: authViewModel, householdToEdit: household) {
                         activeSheet = nil
                     }
+                case .storeProducts(let store):
+                    StoreProductsView(authViewModel: authViewModel, store: store)
                 }
             }
         }
@@ -297,6 +299,7 @@ enum OverviewSheetType: Identifiable {
     case profile
     case createHousehold
     case editHousehold(shared.Household)
+    case storeProducts(shared.Store)
     
     var id: String {
         switch self {
@@ -310,6 +313,8 @@ enum OverviewSheetType: Identifiable {
             return "createHousehold"
         case .editHousehold(let household):
             return "editHousehold-\(household.id)"
+        case .storeProducts(let store):
+            return "storeProducts-\(store.id)"
         }
     }
 }
@@ -363,6 +368,9 @@ struct OverviewTab: View {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                             ForEach(authViewModel.stores, id: \.id) { store in
                                 StoreCard(store: store)
+                                    .onTapGesture {
+                                        activeSheet = .storeProducts(store)
+                                    }
                                     .contextMenu {
                                         Button {
                                             activeSheet = .editStore(store)
@@ -1100,6 +1108,444 @@ struct ProfileView: View {
                 Button("ОК", role: .cancel) {}
             } message: {
                 Text("Все настройки успешно сброшены до значений по умолчанию.")
+            }
+        }
+    }
+}
+
+// MARK: - Store Products View
+struct StoreProductsView: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var authViewModel: AuthViewModel
+    let store: shared.Store
+    
+    @State private var showProductForm = false
+    @State private var productToEdit: shared.Product? = nil
+    @State private var showAiPrompt = false
+    @State private var storeDescription = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                if authViewModel.isLoadingData && authViewModel.products.isEmpty {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Загрузка товаров...")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                } else if authViewModel.isAiGenerating {
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("ИИ подбирает товары для магазина...")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text("Это может занять до 15 секунд")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary.opacity(0.8))
+                    }
+                    .padding()
+                } else if authViewModel.products.isEmpty {
+                    VStack(spacing: 24) {
+                        Image(systemName: "cart.badge.plus")
+                            .font(.system(size: 64))
+                            .foregroundColor(.secondary.opacity(0.6))
+                        
+                        Text("В этом магазине пока нет товаров")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Вы можете добавить товары вручную или сгенерировать автоматический список с помощью ИИ на основе описания ассортимента.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        
+                        Button(action: {
+                            showAiPrompt = true
+                        }) {
+                            HStack {
+                                Image(systemName: "sparkles")
+                                Text("Сгенерировать с помощью ИИ")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: Color.purple.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                        .padding(.horizontal, 32)
+                        .padding(.top, 8)
+                        
+                        Button("Добавить товар вручную") {
+                            productToEdit = nil
+                            showProductForm = true
+                        }
+                        .font(.headline)
+                        .foregroundColor(.blue)
+                    }
+                    .padding()
+                } else {
+                    List {
+                        ForEach(authViewModel.products, id: \.id) { product in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(product.name)
+                                        .font(.body)
+                                        .fontWeight(.semibold)
+                                    
+                                    HStack(spacing: 6) {
+                                        Text(product.unit)
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(Color.blue.opacity(0.1))
+                                            .foregroundColor(.blue)
+                                            .cornerRadius(6)
+                                        
+                                        ForEach(product.categories, id: \.id) { cat in
+                                            HStack(spacing: 3) {
+                                                if let icon = cat.icon {
+                                                    Text(icon)
+                                                }
+                                                Text(cat.name)
+                                            }
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(Color.purple.opacity(0.1))
+                                            .foregroundColor(.purple)
+                                            .cornerRadius(6)
+                                        }
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                            .contextMenu {
+                                Button {
+                                    productToEdit = product
+                                    showProductForm = true
+                                } label: {
+                                    Label("Редактировать", systemImage: "pencil")
+                                }
+                                
+                                Button(role: .destructive) {
+                                    Task {
+                                        await authViewModel.deleteProduct(id: product.id, storeId: store.id)
+                                    }
+                                } label: {
+                                    Label("Удалить", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle(store.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Закрыть") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !authViewModel.products.isEmpty && !authViewModel.isAiGenerating {
+                        Button(action: {
+                            productToEdit = nil
+                            showProductForm = true
+                        }) {
+                            Image(systemName: "plus")
+                        }
+                    }
+                }
+            }
+            .task {
+                await authViewModel.fetchProducts(storeId: store.id)
+                await authViewModel.fetchCategories()
+                await authViewModel.fetchMeasureUnits()
+            }
+            .sheet(isPresented: $showProductForm) {
+                ProductFormSheet(
+                    authViewModel: authViewModel,
+                    store: store,
+                    productToEdit: productToEdit
+                )
+            }
+            .sheet(isPresented: $showAiPrompt) {
+                AiGenerationPromptSheet(
+                    isPresented: $showAiPrompt,
+                    storeDescription: $storeDescription,
+                    onGenerate: {
+                        Task {
+                            await authViewModel.generateProductsWithAi(
+                                storeDescription: storeDescription,
+                                storeId: store.id
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+// MARK: - AI Generation Prompt Sheet
+struct AiGenerationPromptSheet: View {
+    @Binding var isPresented: Bool
+    @Binding var storeDescription: String
+    @State private var desc = ""
+    var onGenerate: () -> Void
+    
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Описание ассортимента магазина")) {
+                    TextEditor(text: $desc)
+                        .frame(height: 120)
+                        .overlay(
+                            Group {
+                                if desc.isEmpty {
+                                    Text("Например: Магазин Красное и Белое, пиво, чипсы, орешки, сухарики, газировка, соки...")
+                                        .font(.body)
+                                        .foregroundColor(.gray.opacity(0.6))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 8)
+                                }
+                            },
+                            alignment: .topLeading
+                        )
+                }
+                
+                Section {
+                    Button(action: {
+                        storeDescription = desc
+                        isPresented = false
+                        onGenerate()
+                    }) {
+                        Text("Сгенерировать товары (10 шт)")
+                            .fontWeight(.bold)
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(.white)
+                    }
+                    .listRowBackground(desc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : Color.purple)
+                    .disabled(desc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .navigationTitle("Генерация через ИИ")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Отмена") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Product Form Sheet
+struct ProductFormSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var authViewModel: AuthViewModel
+    let store: shared.Store
+    let productToEdit: shared.Product?
+    
+    @State private var name = ""
+    @State private var selectedUnit = "шт"
+    @State private var selectedCategoryIds: Set<String> = []
+    
+    // Add new entity states
+    @State private var showAddCategory = false
+    @State private var newCategoryName = ""
+    @State private var newCategoryIcon = ""
+    
+    @State private var showAddUnit = false
+    @State private var newUnitName = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Основная информация")) {
+                    TextField("Название товара", text: $name)
+                }
+                
+                Section(header: Text("Единица измерения")) {
+                    Picker("Единица", selection: $selectedUnit) {
+                        ForEach(authViewModel.measureUnits, id: \.name) { unit in
+                            Text(unit.name).tag(unit.name)
+                        }
+                    }
+                    
+                    Button(action: {
+                        showAddUnit = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                            Text("Добавить свою единицу измерения")
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+                
+                Section(header: Text("Категории товара")) {
+                    if authViewModel.categories.isEmpty {
+                        Text("Категорий нет. Создайте новую ниже.")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    } else {
+                        List {
+                            ForEach(authViewModel.categories, id: \.id) { category in
+                                HStack {
+                                    if let icon = category.icon {
+                                        Text(icon)
+                                    }
+                                    Text(category.name)
+                                    Spacer()
+                                    if selectedCategoryIds.contains(category.id) {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    if selectedCategoryIds.contains(category.id) {
+                                        selectedCategoryIds.remove(category.id)
+                                    } else {
+                                        selectedCategoryIds.insert(category.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    Button(action: {
+                        showAddCategory = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                            Text("Добавить новую категорию")
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+            }
+            .navigationTitle(productToEdit == nil ? "Добавить товар" : "Редактировать товар")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Отмена") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Сохранить") {
+                        Task {
+                            let catIdsArray = Array(selectedCategoryIds)
+                            if let editProduct = productToEdit {
+                                await authViewModel.updateProduct(
+                                    id: editProduct.id,
+                                    name: name,
+                                    unit: selectedUnit,
+                                    categoryIds: catIdsArray,
+                                    storeId: store.id
+                                )
+                            } else {
+                                await authViewModel.createProduct(
+                                    name: name,
+                                    unit: selectedUnit,
+                                    categoryIds: catIdsArray,
+                                    storeId: store.id
+                                )
+                            }
+                            dismiss()
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                if let editProduct = productToEdit {
+                    name = editProduct.name
+                    selectedUnit = editProduct.unit
+                    selectedCategoryIds = Set(editProduct.categories.map { $0.id })
+                } else {
+                    if let firstUnit = authViewModel.measureUnits.first {
+                        selectedUnit = firstUnit.name
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddUnit) {
+                NavigationView {
+                    Form {
+                        TextField("Название (например: мл, бут)", text: $newUnitName)
+                    }
+                    .navigationTitle("Новая единица измерения")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Отмена") {
+                                showAddUnit = false
+                            }
+                        }
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Добавить") {
+                                Task {
+                                    if let created = await authViewModel.createMeasureUnit(name: newUnitName) {
+                                        selectedUnit = created.name
+                                    }
+                                    newUnitName = ""
+                                    showAddUnit = false
+                                }
+                            }
+                            .disabled(newUnitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddCategory) {
+                NavigationView {
+                    Form {
+                        TextField("Название категории", text: $newCategoryName)
+                        TextField("Эмодзи-иконка (необязательно)", text: $newCategoryIcon)
+                    }
+                    .navigationTitle("Новая категория")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Отмена") {
+                                showAddCategory = false
+                            }
+                        }
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Добавить") {
+                                Task {
+                                    let iconVal = newCategoryIcon.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : newCategoryIcon
+                                    if let created = await authViewModel.createCategory(name: newCategoryName, icon: iconVal) {
+                                        selectedCategoryIds.insert(created.id)
+                                    }
+                                    newCategoryName = ""
+                                    newCategoryIcon = ""
+                                    showAddCategory = false
+                                }
+                            }
+                            .disabled(newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
             }
         }
     }
