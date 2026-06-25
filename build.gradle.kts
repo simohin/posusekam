@@ -20,5 +20,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://repo.spring.io/milestone") }
     }
 }

@@ -3,6 +3,12 @@ spring:
     name: backend-service
   config:
     import: "optional:file:/vault/secrets/application.properties"
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:mock-key-for-now}
+      chat:
+        options:
+          model: gpt-4o-mini
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/posusekam}
     username: ${DB_USER:posusekam}

@@ -29,6 +29,10 @@ dependencies {
     
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
+    // Spring AI
+    implementation(platform("org.springframework.ai:spring-ai-bom:1.0.0-M1"))
+    implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter")
+
     implementation(project(":models"))
     implementation(project(":core"))
 
