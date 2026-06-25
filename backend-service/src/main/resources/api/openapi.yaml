@@ -182,6 +182,228 @@ paths:
         '204':
           description: Магазин удален
 
+  /v1/{householdId}/stores/{storeId}/products:
+    get:
+      tags:
+        - Products
+      summary: Получить список товаров в магазине
+      operationId: listProducts
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список товаров
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductDto'
+    post:
+      tags:
+        - Products
+      summary: Добавить товар в магазин
+      operationId: createProduct
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '200':
+          description: Товар создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+
+  /v1/{householdId}/stores/{storeId}/products/{id}:
+    put:
+      tags:
+        - Products
+      summary: Обновить товар в магазине
+      operationId: updateProduct
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Товар обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+    delete:
+      tags:
+        - Products
+      summary: Удалить товар из магазина
+      operationId: deleteProduct
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Товар удален
+
+  /v1/{householdId}/categories:
+    get:
+      tags:
+        - Categories
+      summary: Получить список категорий домовладения
+      operationId: listCategories
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDto'
+    post:
+      tags:
+        - Categories
+      summary: Создать новую категорию в домовладении
+      operationId: createCategory
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '200':
+          description: Категория создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDto'
+
+  /v1/{householdId}/measure-units:
+    get:
+      tags:
+        - MeasureUnits
+      summary: Получить список единиц измерения домовладения
+      operationId: listMeasureUnits
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список единиц измерения
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeasureUnitDto'
+    post:
+      tags:
+        - MeasureUnits
+      summary: Создать новую единицу измерения в домовладении
+      operationId: createMeasureUnit
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeasureUnitRequest'
+      responses:
+        '200':
+          description: Единица измерения создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeasureUnitDto'
+
   /v1/metadata:
     get:
       tags:
@@ -529,5 +751,102 @@ components:
           type: string
         description:
           type: string
+
+    CategoryDto:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+
+    MeasureUnitDto:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    CreateMeasureUnitRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    ProductDto:
+      type: object
+      required:
+        - id
+        - name
+        - unit
+        - categories
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unit:
+          type: string
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryDto'
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - unit
+      properties:
+        name:
+          type: string
+        unit:
+          type: string
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UpdateProductRequest:
+      type: object
+      required:
+        - name
+        - unit
+      properties:
+        name:
+          type: string
+        unit:
+          type: string
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
 
 

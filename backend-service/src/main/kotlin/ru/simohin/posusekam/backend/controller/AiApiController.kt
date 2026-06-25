@@ -14,7 +14,7 @@ import java.util.UUID
 @RestController
 class AiApiController(
     private val productGenerationService: ProductGenerationService,
-    @param:Value("\${posusekam.ai.default-items-count:4}") private val defaultItemsCount: Int
+    @param:Value("\${posusekam.ai.default-items-count:10}") private val defaultItemsCount: Int
 ) : AiApi {
 
     override fun generateProducts(

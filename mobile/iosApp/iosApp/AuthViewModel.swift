@@ -40,6 +40,12 @@ class AuthViewModel: ObservableObject {
     @Published var isLoadingData: Bool = false
     @Published var metadata: shared.AppMetadataDto? = nil
     
+    // Products, Categories & Measure Units state
+    @Published var products: [shared.Product] = []
+    @Published var categories: [shared.Category] = []
+    @Published var measureUnits: [shared.MeasureUnit] = []
+    @Published var isAiGenerating: Bool = false
+    
     // User Settings state
     @Published var hidePurchaseManagement: Bool = false
     
@@ -52,6 +58,7 @@ class AuthViewModel: ObservableObject {
     private let metadataRepository: MetadataRepository
     private let settingsRepository: SettingsRepository
     private let userInfoRepository: UserInfoRepository
+    private let productRepository: ProductRepository
     
     init(baseUrl: String) {
         self.repository = AuthRepository(baseUrl: baseUrl)
@@ -60,6 +67,7 @@ class AuthViewModel: ObservableObject {
         self.metadataRepository = MetadataRepository(baseUrl: baseUrl)
         self.settingsRepository = SettingsRepository(baseUrl: baseUrl)
         self.userInfoRepository = UserInfoRepository(baseUrl: baseUrl)
+        self.productRepository = ProductRepository(baseUrl: baseUrl)
         
         self.isAuthenticated = repository.isAuthenticated()
         
@@ -423,5 +431,153 @@ class AuthViewModel: ObservableObject {
             avatarUrl: claims.picture,
             provider: provider
         )
+    }
+    
+    // MARK: - Products & AI Operations
+    
+    func fetchProducts(storeId: String) async {
+        guard let householdId = activeHousehold?.id else { return }
+        self.isLoadingData = true
+        do {
+            let fetched = try await productRepository.getProducts(householdId: householdId, storeId: storeId)
+            self.products = fetched
+            self.isLoadingData = false
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoadingData = false
+        }
+    }
+
+    func createProduct(name: String, unit: String, categoryIds: [String]?, storeId: String) async {
+        guard let householdId = activeHousehold?.id else { return }
+        do {
+            let _ = try await productRepository.createProduct(
+                householdId: householdId,
+                storeId: storeId,
+                name: name,
+                unit: unit,
+                categoryIds: categoryIds
+            )
+            await fetchProducts(storeId: storeId)
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateProduct(id: String, name: String, unit: String, categoryIds: [String]?, storeId: String) async {
+        guard let householdId = activeHousehold?.id else { return }
+        do {
+            let _ = try await productRepository.updateProduct(
+                householdId: householdId,
+                storeId: storeId,
+                id: id,
+                name: name,
+                unit: unit,
+                categoryIds: categoryIds
+            )
+            await fetchProducts(storeId: storeId)
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    func deleteProduct(id: String, storeId: String) async {
+        guard let householdId = activeHousehold?.id else { return }
+        do {
+            try await productRepository.deleteProduct(householdId: householdId, storeId: storeId, id: id)
+            await fetchProducts(storeId: storeId)
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    func fetchCategories() async {
+        guard let householdId = activeHousehold?.id else { return }
+        do {
+            self.categories = try await productRepository.getCategories(householdId: householdId)
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    func createCategory(name: String, icon: String? = nil) async -> shared.Category? {
+        guard let householdId = activeHousehold?.id else { return nil }
+        do {
+            let created = try await productRepository.createCategory(householdId: householdId, name: name, icon: icon)
+            await fetchCategories()
+            return created
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func fetchMeasureUnits() async {
+        guard let householdId = activeHousehold?.id else { return }
+        do {
+            self.measureUnits = try await productRepository.getMeasureUnits(householdId: householdId)
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    func createMeasureUnit(name: String) async -> shared.MeasureUnit? {
+        guard let householdId = activeHousehold?.id else { return nil }
+        do {
+            let created = try await productRepository.createMeasureUnit(householdId: householdId, name: name)
+            await fetchMeasureUnits()
+            return created
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func generateProductsWithAi(storeDescription: String, storeId: String) async {
+        guard let householdId = activeHousehold?.id else { return }
+        self.isAiGenerating = true
+        do {
+            // 1. Вызываем генерацию
+            let response = try await productRepository.generateProducts(
+                storeDescription: storeDescription,
+                householdId: householdId,
+                itemsCount: 10
+            )
+            
+            // 2. Для каждого продукта от AI создаем его в базе
+            await fetchCategories()
+            await fetchMeasureUnits()
+            
+            for aiProduct in response.products {
+                var catIds: [String] = []
+                if let matchedCategory = self.categories.first(where: { $0.name.lowercased() == aiProduct.category.lowercased() }) {
+                    catIds.append(matchedCategory.id)
+                } else {
+                    if let newCat = await createCategory(name: aiProduct.category) {
+                        catIds.append(newCat.id)
+                    }
+                }
+                
+                let unitName = aiProduct.measureUnit
+                if !self.measureUnits.contains(where: { $0.name.lowercased() == unitName.lowercased() }) {
+                    let _ = await createMeasureUnit(name: unitName)
+                }
+                
+                let _ = try await productRepository.createProduct(
+                    householdId: householdId,
+                    storeId: storeId,
+                    name: aiProduct.name,
+                    unit: unitName,
+                    categoryIds: catIds
+                )
+            }
+            
+            // 3. Обновляем список продуктов
+            await fetchProducts(storeId: storeId)
+            self.isAiGenerating = false
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isAiGenerating = false
+        }
     }
 }
