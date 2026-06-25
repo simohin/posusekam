@@ -1,6 +1,8 @@
 package ru.simohin.posusekam.models.entity
 
 import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.util.UUID
 
 @Entity
@@ -10,7 +12,7 @@ data class UserInfo(
     @Column(name = "user_id")
     val userId: UUID,
 
-    @Convert(converter = JsonMapConverter::class)
-    @Column(name = "info", columnDefinition = "jsonb", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "info", nullable = false)
     var info: Map<String, Any> = emptyMap()
 )
