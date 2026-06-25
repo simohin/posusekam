@@ -52,7 +52,7 @@ tolerations: []
 affinity: {}
 
 database:
-  url: "jdbc:postgresql://192.168.0.106:5432/postgres"
+  url: "jdbc:postgresql://192.168.0.106:5432/posusekam"
   username: "posusekam"
   password: "47Gumito"
 

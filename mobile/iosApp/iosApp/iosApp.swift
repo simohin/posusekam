@@ -112,6 +112,8 @@ struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @State private var selectedTab = 0
     @State private var showMagicAlert = false
+    @State private var activeSheet: OverviewSheetType? = nil
+    @State private var showDeleteHouseholdConfirmation = false
 
     var body: some View {
         let tabBinding = Binding<Int>(
@@ -125,171 +127,24 @@ struct ContentView: View {
             }
         )
         
-        TabView(selection: tabBinding) {
-            Tab("Обзор", systemImage: "chart.pie.fill", value: 0) {
-                OverviewTab(authViewModel: authViewModel)
-            }
-            
-            Tab("Вычисления", systemImage: "function", value: 1) {
-                CalculatorTab(authViewModel: authViewModel)
-            }
-            
-            Tab("Магия", systemImage: "wand.and.stars.inverse", value: 2, role: .search) {
-                Color.clear
-            }
-        }
-        .tint(.blue)
-        .alert("Волшебная функция", isPresented: $showMagicAlert) {
-            Button("ОК", role: .cancel) {}
-        } message: {
-            Text("Скоро здесь появится интеллектуальный подбор действий и управление покупками с помощью ИИ!")
-        }
-    }
-}
-
-enum OverviewSheetType: Identifiable {
-    case createStore
-    case editStore(shared.Store)
-    case profile
-    case createHousehold
-    case editHousehold(shared.Household)
-    
-    var id: String {
-        switch self {
-        case .createStore:
-            return "createStore"
-        case .editStore(let store):
-            return "editStore-\(store.id)"
-        case .profile:
-            return "profile"
-        case .createHousehold:
-            return "createHousehold"
-        case .editHousehold(let household):
-            return "editHousehold-\(household.id)"
-        }
-    }
-}
-
-// MARK: - Overview Tab
-struct OverviewTab: View {
-    @ObservedObject var authViewModel: AuthViewModel
-    
-    // States for Alerts
-    @State private var showDeleteHouseholdConfirmation = false
-    
-    // States for Sheets
-    @State private var activeSheet: OverviewSheetType? = nil
-    
-    var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    
-                    // First Block: Мои магазины (Магазины)
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Мои магазины")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            Spacer()
-                            Button(action: {
-                                activeSheet = .createStore
-                            }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        if authViewModel.stores.isEmpty {
-                            VStack(spacing: 16) {
-                                Image(systemName: "storefront")
-                                    .font(.system(size: 44))
-                                    .foregroundColor(.secondary.opacity(0.8))
-                                Text("В этом доме еще нет магазинов")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                Button("Добавить магазин") {
-                                    activeSheet = .createStore
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.blue)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(30)
-                            .background(Color(uiColor: .secondarySystemGroupedBackground))
-                            .cornerRadius(24)
-                            .padding(.horizontal)
-                        } else {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                                ForEach(authViewModel.stores, id: \.id) { store in
-                                    StoreCard(store: store)
-                                        .contextMenu {
-                                            Button {
-                                                activeSheet = .editStore(store)
-                                            } label: {
-                                                Label("Редактировать", systemImage: "pencil")
-                                            }
-                                            
-                                            Button(role: .destructive) {
-                                                Task {
-                                                    await authViewModel.deleteStore(id: store.id)
-                                                }
-                                            } label: {
-                                                Label("Удалить", systemImage: "trash")
-                                            }
-                                        }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    }
-                    
-                    
-                    // Info Section
-                    if !authViewModel.hidePurchaseManagement {
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Text("Управление покупками")
-                                    .font(.headline)
-                                Spacer()
-                                Button(action: {
-                                    authViewModel.updateHidePurchaseManagement(hide: true)
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
-                                        .font(.title3)
-                                }
-                            }
-                            
-                            Text("В каждом магазине хранится собственный каталог продуктов и запасов. Категории и теги создаются в рамках дома и могут применяться к любым продуктам.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Button(action: {
-                                authViewModel.updateHidePurchaseManagement(hide: true)
-                            }) {
-                                Text("Не показывать больше")
-                                    .font(.footnote)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.blue)
-                            }
-                            .padding(.top, 4)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground))
-                        .cornerRadius(20)
-                        .padding(.horizontal)
-                    }
+            TabView(selection: tabBinding) {
+                Tab("Обзор", systemImage: "chart.pie.fill", value: 0) {
+                    OverviewTab(authViewModel: authViewModel, activeSheet: $activeSheet)
                 }
-                .padding(.vertical)
+                
+                Tab("Вычисления", systemImage: "function", value: 1) {
+                    CalculatorTab(authViewModel: authViewModel, activeSheet: $activeSheet)
+                }
+                
+                Tab("Магия", systemImage: "wand.and.stars.inverse", value: 2, role: .search) {
+                    Color.clear
+                }
             }
-            .background(Color(uiColor: .systemGroupedBackground))
+            .tint(.blue)
             .navigationBarTitleDisplayMode(.inline)
             
-            // Toolbar containing active household switcher
+            // Toolbar containing active household switcher and profile avatar
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
@@ -352,6 +207,7 @@ struct OverviewTab: View {
                         }
                     }
                 }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         activeSheet = .profile
@@ -418,6 +274,149 @@ struct OverviewTab: View {
                 }
             }
         }
+        .alert("Волшебная функция", isPresented: $showMagicAlert) {
+            Button("ОК", role: .cancel) {}
+        } message: {
+            Text("Скоро здесь появится интеллектуальный подбор действий и управление покупками с помощью ИИ!")
+        }
+    }
+}
+
+enum OverviewSheetType: Identifiable {
+    case createStore
+    case editStore(shared.Store)
+    case profile
+    case createHousehold
+    case editHousehold(shared.Household)
+    
+    var id: String {
+        switch self {
+        case .createStore:
+            return "createStore"
+        case .editStore(let store):
+            return "editStore-\(store.id)"
+        case .profile:
+            return "profile"
+        case .createHousehold:
+            return "createHousehold"
+        case .editHousehold(let household):
+            return "editHousehold-\(household.id)"
+        }
+    }
+}
+
+// MARK: - Overview Tab
+struct OverviewTab: View {
+    @ObservedObject var authViewModel: AuthViewModel
+    @Binding var activeSheet: OverviewSheetType?
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                
+                // First Block: Мои магазины (Магазины)
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Мои магазины")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Spacer()
+                        Button(action: {
+                            activeSheet = .createStore
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    if authViewModel.stores.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "storefront")
+                                .font(.system(size: 44))
+                                .foregroundColor(.secondary.opacity(0.8))
+                            Text("В этом доме еще нет магазинов")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Button("Добавить магазин") {
+                                activeSheet = .createStore
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.blue)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(30)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .cornerRadius(24)
+                        .padding(.horizontal)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            ForEach(authViewModel.stores, id: \.id) { store in
+                                StoreCard(store: store)
+                                    .contextMenu {
+                                        Button {
+                                            activeSheet = .editStore(store)
+                                        } label: {
+                                            Label("Редактировать", systemImage: "pencil")
+                                        }
+                                        
+                                        Button(role: .destructive) {
+                                            Task {
+                                                await authViewModel.deleteStore(id: store.id)
+                                            }
+                                        } label: {
+                                            Label("Удалить", systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                
+                
+                // Info Section
+                if !authViewModel.hidePurchaseManagement {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Text("Управление покупками")
+                                .font(.headline)
+                            Spacer()
+                            Button(action: {
+                                authViewModel.updateHidePurchaseManagement(hide: true)
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                                    .font(.title3)
+                            }
+                        }
+                        
+                        Text("В каждом магазине хранится собственный каталог продуктов и запасов. Категории и теги создаются в рамках дома и могут применяться к любым продуктам.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Button(action: {
+                            authViewModel.updateHidePurchaseManagement(hide: true)
+                        }) {
+                            Text("Не показывать больше")
+                                .font(.footnote)
+                                .fontWeight(.medium)
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(20)
+                    .padding(.horizontal)
+                }
+            }
+            .padding(.vertical)
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("")
     }
 }
 
@@ -894,76 +893,45 @@ struct StoreCard: View {
 // MARK: - Calculator Tab
 struct CalculatorTab: View {
     @ObservedObject var authViewModel: AuthViewModel
+    @Binding var activeSheet: OverviewSheetType?
     @State private var count: Int = 10
     @State private var result: [Int] = []
-    @State private var showProfileSheet = false
     
     var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Количество чисел")) {
-                    Stepper("Сгенерировать: \(count)", value: $count, in: 0...20)
-                }
-                
-                Section {
-                    Button(action: {
-                        withAnimation {
-                            let kotlinList = FibonacciKt.generateFibonacci(count: Int32(count))
-                            result = kotlinList.map { Int(truncating: $0 as NSNumber) }
-                        }
-                    }) {
-                        HStack {
-                            Spacer()
-                            Text("Рассчитать последовательность")
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            Spacer()
-                        }
-                    }
-                    .listRowBackground(Color.blue)
-                }
-                
-                if !result.isEmpty {
-                    Section(header: Text("Результат Фибоначчи")) {
-                        Text(result.map { String($0) }.joined(separator: ", "))
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.medium)
-                            .foregroundColor(.blue)
-                            .padding(.vertical, 8)
-                    }
-                }
+        Form {
+            Section(header: Text("Количество чисел")) {
+                Stepper("Сгенерировать: \(count)", value: $count, in: 0...20)
             }
-            .navigationTitle("Вычисления")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showProfileSheet = true
-                    }) {
-                        let finalAvatarUrl = authViewModel.userInfo?.avatarUrl ?? authViewModel.userProfile?.avatarUrl
-                        if let avatarUrl = finalAvatarUrl, let url = URL(string: avatarUrl) {
-                            AsyncImage(url: url) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.blue)
-                            }
-                            .frame(width: 32, height: 32)
-                            .clipShape(Circle())
-                        } else {
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                        }
+            
+            Section {
+                Button(action: {
+                    withAnimation {
+                        let kotlinList = FibonacciKt.generateFibonacci(count: Int32(count))
+                        result = kotlinList.map { Int(truncating: $0 as NSNumber) }
+                    }
+                }) {
+                    HStack {
+                        Spacer()
+                        Text("Рассчитать последовательность")
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        Spacer()
                     }
                 }
+                .listRowBackground(Color.blue)
             }
-            .sheet(isPresented: $showProfileSheet) {
-                ProfileView(authViewModel: authViewModel)
+            
+            if !result.isEmpty {
+                Section(header: Text("Результат Фибоначчи")) {
+                    Text(result.map { String($0) }.joined(separator: ", "))
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                        .padding(.vertical, 8)
+                }
             }
         }
+        .navigationTitle("Вычисления")
     }
 }
 

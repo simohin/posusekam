@@ -59,4 +59,12 @@ kubectl exec -n vault vault-0 -- env VAULT_TOKEN="$VAULT_TOKEN" vault write auth
     policies=posusekam-auth-read \
     ttl=1h
 
+# 5. Write Database Secrets from .env
+echo "5. Writing Database Secrets to Vault..."
+DB_URL="jdbc:postgresql://${DB_HOST:-192.168.0.106}:${DB_PORT:-5432}/${DB_NAME:-posusekam}"
+kubectl exec -n vault vault-0 -- env VAULT_TOKEN="$VAULT_TOKEN" vault kv put secret/posusekam/database \
+    url="$DB_URL" \
+    username="${DB_USER:-posusekam}" \
+    password="${DB_PASSWORD:-47Gumito}"
+
 echo "=== Setup Complete! ==="
