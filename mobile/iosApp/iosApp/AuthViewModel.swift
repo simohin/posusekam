@@ -46,6 +46,9 @@ class AuthViewModel: ObservableObject {
     @Published var measureUnits: [shared.MeasureUnit] = []
     @Published var isAiGenerating: Bool = false
     
+    // Shopping Lists state
+    @Published var shoppingLists: [shared.ShoppingList] = []
+    
     // User Settings state
     @Published var hidePurchaseManagement: Bool = false
     
@@ -59,6 +62,7 @@ class AuthViewModel: ObservableObject {
     private let settingsRepository: SettingsRepository
     private let userInfoRepository: UserInfoRepository
     private let productRepository: ProductRepository
+    private let shoppingListRepository: ShoppingListRepository
     
     init(baseUrl: String) {
         self.repository = AuthRepository(baseUrl: baseUrl)
@@ -68,6 +72,7 @@ class AuthViewModel: ObservableObject {
         self.settingsRepository = SettingsRepository(baseUrl: baseUrl)
         self.userInfoRepository = UserInfoRepository(baseUrl: baseUrl)
         self.productRepository = ProductRepository(baseUrl: baseUrl)
+        self.shoppingListRepository = ShoppingListRepository(baseUrl: baseUrl)
         
         self.isAuthenticated = repository.isAuthenticated()
         
@@ -164,6 +169,7 @@ class AuthViewModel: ObservableObject {
         self.households = []
         self.activeHousehold = nil
         self.stores = []
+        self.shoppingLists = []
         self.metadata = nil
         self.hidePurchaseManagement = false
         self.userInfo = nil
@@ -318,6 +324,7 @@ class AuthViewModel: ObservableObject {
     func fetchStores() async {
         guard let householdId = activeHousehold?.id else {
             self.stores = []
+            self.shoppingLists = []
             return
         }
         self.isLoadingData = true
@@ -325,6 +332,7 @@ class AuthViewModel: ObservableObject {
         do {
             let list = try await storeRepository.getStores(householdId: householdId)
             self.stores = list
+            await fetchShoppingLists()
         } catch {
             self.errorMessage = "Ошибка при загрузке магазинов: \(error.localizedDescription)"
             if error.localizedDescription.contains("401") {
@@ -376,6 +384,66 @@ class AuthViewModel: ObservableObject {
             await fetchStores()
         } catch {
             self.errorMessage = "Не удалось удалить магазин: \(error.localizedDescription)"
+        }
+        self.isLoadingData = false
+    }
+    
+    // --- Shopping Lists CRUD ---
+    
+    func fetchShoppingLists() async {
+        guard let householdId = activeHousehold?.id else {
+            self.shoppingLists = []
+            return
+        }
+        self.isLoadingData = true
+        self.errorMessage = nil
+        do {
+            let list = try await shoppingListRepository.getShoppingLists(householdId: householdId)
+            self.shoppingLists = list
+        } catch {
+            self.errorMessage = "Ошибка при загрузке списков покупок: \(error.localizedDescription)"
+            if error.localizedDescription.contains("401") {
+                self.logout()
+            }
+        }
+        self.isLoadingData = false
+    }
+    
+    func createShoppingList(storeId: String, items: [shared.CreateShoppingListItemRequest]) async {
+        guard let householdId = activeHousehold?.id else { return }
+        self.isLoadingData = true
+        self.errorMessage = nil
+        do {
+            _ = try await shoppingListRepository.createShoppingList(householdId: householdId, storeId: storeId, items: items)
+            await fetchShoppingLists()
+        } catch {
+            self.errorMessage = "Не удалось создать список покупок: \(error.localizedDescription)"
+        }
+        self.isLoadingData = false
+    }
+    
+    func updateShoppingList(id: String, completed: Bool, items: [shared.CreateShoppingListItemRequest]) async {
+        guard let householdId = activeHousehold?.id else { return }
+        self.isLoadingData = true
+        self.errorMessage = nil
+        do {
+            _ = try await shoppingListRepository.updateShoppingList(householdId: householdId, id: id, completed: completed, items: items)
+            await fetchShoppingLists()
+        } catch {
+            self.errorMessage = "Не удалось обновить список покупок: \(error.localizedDescription)"
+        }
+        self.isLoadingData = false
+    }
+    
+    func deleteShoppingList(id: String) async {
+        guard let householdId = activeHousehold?.id else { return }
+        self.isLoadingData = true
+        self.errorMessage = nil
+        do {
+            try await shoppingListRepository.deleteShoppingList(householdId: householdId, id: id)
+            await fetchShoppingLists()
+        } catch {
+            self.errorMessage = "Не удалось удалить список покупок: \(error.localizedDescription)"
         }
         self.isLoadingData = false
     }

@@ -133,8 +133,8 @@ struct ContentView: View {
                     OverviewTab(authViewModel: authViewModel, activeSheet: $activeSheet)
                 }
                 
-                Tab("Вычисления", systemImage: "function", value: 1) {
-                    CalculatorTab(authViewModel: authViewModel, activeSheet: $activeSheet)
+                Tab("Планирование", systemImage: "cart.fill", value: 1) {
+                    PurchasePlanningTab(authViewModel: authViewModel, activeSheet: $activeSheet)
                 }
                 
                 Tab("Магия", systemImage: "wand.and.stars.inverse", value: 2, role: .search) {
@@ -907,48 +907,868 @@ struct StoreCard: View {
     }
 }
 
-// MARK: - Calculator Tab
-struct CalculatorTab: View {
+// MARK: - Purchase Planning Tab
+// MARK: - Purchase Planning structures
+struct PlanningItem: Identifiable, Hashable, Codable {
+    let id: String
+    let name: String
+    let categoryName: String
+    var amount: Double
+    let unit: String
+    var isNeeded: Bool
+}
+
+// MARK: - Purchase Planning Tab
+struct PurchasePlanningTab: View {
     @ObservedObject var authViewModel: AuthViewModel
     @Binding var activeSheet: OverviewSheetType?
-    @State private var count: Int = 10
-    @State private var result: [Int] = []
+    
+    @State private var selectedStoreForPlanning: shared.Store? = nil
+    
+    private func getInitialList(for storeId: String) -> [PlanningItem]? {
+        guard let list = authViewModel.shoppingLists.first(where: { $0.storeId == storeId && !$0.completed }) else {
+            return nil
+        }
+        return list.items.map { item in
+            PlanningItem(
+                id: item.id,
+                name: item.name,
+                categoryName: item.categoryName,
+                amount: item.amount,
+                unit: item.unit,
+                isNeeded: true
+            )
+        }
+    }
     
     var body: some View {
-        Form {
-            Section(header: Text("Количество чисел")) {
-                Stepper("Сгенерировать: \(count)", value: $count, in: 0...20)
-            }
-            
-            Section {
-                Button(action: {
-                    withAnimation {
-                        let kotlinList = FibonacciKt.generateFibonacci(count: Int32(count))
-                        result = kotlinList.map { Int(truncating: $0 as NSNumber) }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Выберите магазин для планирования покупок")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                
+                if authViewModel.stores.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "storefront")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary.opacity(0.7))
+                        Text("Нет доступных магазинов")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text("Создайте магазин на вкладке 'Обзор', чтобы начать планирование.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
                     }
-                }) {
-                    HStack {
-                        Spacer()
-                        Text("Рассчитать последовательность")
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        Spacer()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
+                        ForEach(authViewModel.stores, id: \.id) { store in
+                            let activeList = authViewModel.shoppingLists.first(where: { $0.storeId == store.id && !$0.completed })
+                            let isCompleted = activeList != nil
+                            
+                            Button(action: {
+                                selectedStoreForPlanning = store
+                            }) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        // Иконка магазина
+                                        ZStack {
+                                            Circle()
+                                                .fill(colorFromString(store.color).opacity(0.15))
+                                                .frame(width: 44, height: 44)
+                                            
+                                            if let icon = store.icon, isEmoji(icon) {
+                                                Text(icon)
+                                                    .font(.title2)
+                                            } else {
+                                                Image(systemName: store.icon ?? "storefront.fill")
+                                                    .font(.title3)
+                                                    .foregroundColor(colorFromString(store.color))
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        // Статус завершенности
+                                        if isCompleted {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.title3)
+                                        }
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(store.name)
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        
+                                        if isCompleted, let itemCount = activeList?.items.count {
+                                            Text("Запланировано: \(itemCount) тов.")
+                                                .font(.caption)
+                                                .foregroundColor(.green)
+                                                .fontWeight(.semibold)
+                                        } else {
+                                            Text("Нажмите для планирования")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(isCompleted ? Color.green.opacity(0.05) : Color(uiColor: .secondarySystemGroupedBackground))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(isCompleted ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1.5)
+                                )
+                                .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .padding(.horizontal)
                 }
-                .listRowBackground(Color.blue)
             }
-            
-            if !result.isEmpty {
-                Section(header: Text("Результат Фибоначчи")) {
-                    Text(result.map { String($0) }.joined(separator: ", "))
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.medium)
-                        .foregroundColor(.blue)
-                        .padding(.vertical, 8)
+            .padding(.top)
+        }
+        .navigationTitle("Планирование закупки")
+        .sheet(isPresented: Binding<Bool>(
+            get: { selectedStoreForPlanning != nil },
+            set: { if !$0 { selectedStoreForPlanning = nil } }
+        )) {
+            if let store = selectedStoreForPlanning {
+                PurchasePlanningFlowView(
+                    store: store,
+                    authViewModel: authViewModel,
+                    initialList: getInitialList(for: store.id)
+                ) { plannedItems in
+                    Task {
+                        let activeList = authViewModel.shoppingLists.first(where: { $0.storeId == store.id && !$0.completed })
+                        let requests = plannedItems.map { item in
+                            shared.CreateShoppingListItemRequest(
+                                name: item.name,
+                                categoryName: item.categoryName,
+                                amount: item.amount,
+                                unit: item.unit
+                            )
+                        }
+                        
+                        if let existingList = activeList {
+                            if requests.isEmpty {
+                                await authViewModel.deleteShoppingList(id: existingList.id)
+                            } else {
+                                await authViewModel.updateShoppingList(id: existingList.id, completed: false, items: requests)
+                            }
+                        } else {
+                            if !requests.isEmpty {
+                                await authViewModel.createShoppingList(storeId: store.id, items: requests)
+                            }
+                        }
+                    }
+                    selectedStoreForPlanning = nil
                 }
             }
         }
-        .navigationTitle("Вычисления")
+        .task {
+            await authViewModel.fetchStores()
+        }
+    }
+    
+    private func colorFromString(_ colorStr: String?) -> Color {
+        switch colorStr {
+        case "indigo": return .indigo
+        case "blue": return .blue
+        case "teal": return .teal
+        case "green": return .green
+        case "orange": return .orange
+        case "red": return .red
+        case "pink": return .pink
+        default: return .indigo
+        }
+    }
+}
+
+// MARK: - Purchase Planning Flow View
+struct PurchasePlanningFlowView: View {
+    let store: shared.Store
+    @ObservedObject var authViewModel: AuthViewModel
+    let initialList: [PlanningItem]?
+    var onComplete: ([PlanningItem]) -> Void
+    
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var planningItems: [PlanningItem] = []
+    @State private var currentIndex: Int = 0
+    @State private var showingSummary: Bool = false
+    @State private var editingSingleItemIndex: Int? = nil
+    @State private var showAddItemSheet: Bool = false
+    @State private var isLoading: Bool = true
+    
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading {
+                    ProgressView("Загрузка товаров магазина...")
+                } else if showingSummary {
+                    planningSummaryView
+                } else if planningItems.isEmpty {
+                    emptyStoreView
+                } else if currentIndex < planningItems.count {
+                    tinderSwipeView
+                } else {
+                    VStack {
+                        ProgressView()
+                        Text("Переход к итогам...")
+                    }
+                    .onAppear {
+                        showingSummary = true
+                    }
+                }
+            }
+            .navigationTitle(store.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    let isEditing = editingSingleItemIndex != nil
+                    Button(isEditing ? "Назад" : "Отмена") {
+                        if isEditing {
+                            editingSingleItemIndex = nil
+                            showingSummary = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                }
+                if showingSummary {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Готово") {
+                            onComplete(planningItems.filter { $0.isNeeded })
+                        }
+                        .fontWeight(.bold)
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddItemSheet) {
+                AddItemView(
+                    authViewModel: authViewModel,
+                    store: store,
+                    planningItems: $planningItems
+                ) { newItem in
+                    withAnimation {
+                        if let existingIdx = planningItems.firstIndex(where: { $0.name.lowercased() == newItem.name.lowercased() }) {
+                            planningItems[existingIdx].isNeeded = true
+                            planningItems[existingIdx].amount = newItem.amount
+                        } else {
+                            planningItems.append(newItem)
+                        }
+                    }
+                    showAddItemSheet = false
+                }
+            }
+            .task {
+                isLoading = true
+                await authViewModel.fetchProducts(storeId: store.id)
+                await authViewModel.fetchCategories()
+                await authViewModel.fetchMeasureUnits()
+                
+                if let initialList = initialList {
+                    self.planningItems = initialList
+                    let existingNames = Set(initialList.map { $0.name.lowercased() })
+                    for product in authViewModel.products {
+                        if !existingNames.contains(product.name.lowercased()) {
+                            let categoryName = product.categories.first?.name ?? "Без категории"
+                            self.planningItems.append(
+                                PlanningItem(
+                                    id: product.id,
+                                    name: product.name,
+                                    categoryName: categoryName,
+                                    amount: 1.0,
+                                    unit: product.unit,
+                                    isNeeded: false
+                                )
+                            )
+                        }
+                    }
+                    showingSummary = true
+                } else {
+                    self.planningItems = authViewModel.products.map { product in
+                        let categoryName = product.categories.first?.name ?? "Без категории"
+                        return PlanningItem(
+                            id: product.id,
+                            name: product.name,
+                            categoryName: categoryName,
+                            amount: 1.0,
+                            unit: product.unit,
+                            isNeeded: false
+                        )
+                    }
+                    currentIndex = 0
+                    showingSummary = false
+                }
+                isLoading = false
+            }
+        }
+    }
+    
+    var tinderSwipeView: some View {
+        VStack(spacing: 20) {
+            let isEditing = editingSingleItemIndex != nil
+            
+            if isEditing {
+                Text("Редактирование товара")
+                    .font(.headline)
+                    .padding(.top)
+            } else {
+                let progress = Double(currentIndex) / Double(planningItems.count)
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .padding(.horizontal)
+                    .padding(.top)
+                
+                Text("Товар \(currentIndex + 1) из \(planningItems.count)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            ZStack {
+                if !isEditing && currentIndex + 1 < planningItems.count {
+                    let nextItem = planningItems[currentIndex + 1]
+                    VStack(spacing: 0) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.gray.opacity(0.1))
+                            Image(systemName: "basket.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray.opacity(0.3))
+                        }
+                        .frame(height: 240)
+                        .cornerRadius(16)
+                        .padding(12)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(nextItem.name)
+                                .font(.title3)
+                                .bold()
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            Text(nextItem.categoryName)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    }
+                    .frame(height: 480)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(24)
+                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                    .scaleEffect(0.95)
+                    .offset(y: 10)
+                    .opacity(0.7)
+                }
+                
+                TinderCardView(item: $planningItems[currentIndex]) { isNeeded in
+                    planningItems[currentIndex].isNeeded = isNeeded
+                    withAnimation {
+                        if isEditing {
+                            editingSingleItemIndex = nil
+                            showingSummary = true
+                        } else {
+                            currentIndex += 1
+                            if currentIndex >= planningItems.count {
+                                showingSummary = true
+                            }
+                        }
+                    }
+                }
+                .id(planningItems[currentIndex].id)
+            }
+            .frame(height: 480)
+            .padding(.horizontal, 20)
+            
+            Spacer()
+        }
+        .padding(.bottom, 24)
+    }
+    
+    var planningSummaryView: some View {
+        VStack(spacing: 0) {
+            let selectedItems = planningItems.filter { $0.isNeeded }
+            
+            if selectedItems.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "cart.badge.questionmark")
+                        .font(.system(size: 64))
+                        .foregroundColor(.secondary.opacity(0.7))
+                    Text("В списке покупок ничего нет")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Вы можете добавить товары из каталога или создать новые.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    
+                    Button("Добавить товар") {
+                        showAddItemSheet = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .padding(.top, 8)
+                }
+                .frame(maxHeight: .infinity)
+            } else {
+                List {
+                    Section(header: Text("Выбранные товары (\(selectedItems.count))")) {
+                        ForEach(selectedItems) { item in
+                            Button(action: {
+                                if let idx = planningItems.firstIndex(where: { $0.id == item.id }) {
+                                    editingSingleItemIndex = idx
+                                    currentIndex = idx
+                                    showingSummary = false
+                                }
+                            }) {
+                                HStack {
+                                    Button(action: {
+                                        if let idx = planningItems.firstIndex(where: { $0.id == item.id }) {
+                                            withAnimation {
+                                                planningItems[idx].isNeeded = false
+                                            }
+                                        }
+                                    }) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.title3)
+                                    }
+                                    .buttonStyle(.plain)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.name)
+                                            .font(.body)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        Text(item.categoryName)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(.leading, 6)
+                                    
+                                    Spacer()
+                                    
+                                    Text(formatAmount(item.amount, unit: item.unit))
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .fontWeight(.semibold)
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 4)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    
+                    Section {
+                        Button(action: {
+                            showAddItemSheet = true
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.blue)
+                                Text("Добавить товар...")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+            }
+        }
+    }
+    
+    var emptyStoreView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "cart.badge.plus")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary.opacity(0.7))
+            Text("В магазине пока нет товаров")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            Text("Для планирования закупки добавьте товары из каталога или создайте новые.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            
+            Button("Добавить товар") {
+                showAddItemSheet = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+        }
+        .frame(maxHeight: .infinity)
+    }
+    
+
+    
+    private func formatAmount(_ amount: Double, unit: String) -> String {
+        let isInteger = amount.truncatingRemainder(dividingBy: 1) == 0
+        let valStr = isInteger ? String(Int(amount)) : String(format: "%.1f", amount)
+        return "\(valStr) \(unit)"
+    }
+}
+
+// MARK: - Tinder Card View
+struct TinderCardView: View {
+    @Binding var item: PlanningItem
+    var onDecision: (Bool) -> Void
+    
+    @State private var translation: CGSize = .zero
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let height = geometry.size.height
+            
+            VStack(spacing: 0) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    
+                    VStack(spacing: 12) {
+                        Image(systemName: "basket.fill")
+                            .font(.system(size: 80))
+                            .foregroundColor(.blue.opacity(0.6))
+                        
+                        Text("Изображение товара")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(height: height * 0.44)
+                .cornerRadius(16)
+                .padding(12)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.name)
+                            .font(.title2)
+                            .bold()
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                        
+                        Text(item.categoryName)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    HStack {
+                        Text("Количество:")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 16) {
+                            Button(action: {
+                                if item.amount > 0.5 {
+                                    item.amount -= 0.5
+                                } else if item.amount > 0.1 {
+                                    item.amount -= 0.1
+                                }
+                            }) {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                            }
+                            
+                            Text(formatAmount(item.amount, unit: item.unit))
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .frame(minWidth: 70)
+                                .multilineTextAlignment(.center)
+                            
+                            Button(action: {
+                                item.amount += 0.5
+                            }) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color(uiColor: .systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 40) {
+                        Spacer()
+                        
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                translation = CGSize(width: -width * 1.5, height: 0)
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onDecision(false)
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red.opacity(0.1))
+                                    .frame(width: 56, height: 56)
+                                Image(systemName: "xmark")
+                                    .font(.title3)
+                                    .bold()
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                translation = CGSize(width: width * 1.5, height: 0)
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onDecision(true)
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.1))
+                                    .frame(width: 56, height: 56)
+                                Image(systemName: "checkmark")
+                                    .font(.title3)
+                                    .bold()
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+                }
+                .padding([.horizontal, .bottom], 20)
+            }
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(24)
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+            .overlay(
+                ZStack {
+                    if translation.width > 0 {
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.green, lineWidth: 6)
+                        
+                        Text("НАДО")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundColor(.green)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .border(Color.green, width: 4)
+                            .cornerRadius(8)
+                            .rotationEffect(.degrees(-15))
+                            .opacity(Double(min(translation.width / (width / 3), 1)))
+                    } else if translation.width < 0 {
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.red, lineWidth: 6)
+                        
+                        Text("НЕ НАДО")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .border(Color.red, width: 4)
+                            .cornerRadius(8)
+                            .rotationEffect(.degrees(15))
+                            .opacity(Double(min(-translation.width / (width / 3), 1)))
+                    }
+                }
+            )
+            .offset(translation)
+            .rotationEffect(.degrees(Double(translation.width / width * 25)))
+            .gesture(
+                DragGesture(minimumDistance: 10)
+                    .onChanged { value in
+                        translation = value.translation
+                    }
+                    .onEnded { value in
+                        let threshold = width * 0.35
+                        if value.translation.width > threshold {
+                            withAnimation(.spring()) {
+                                translation = CGSize(width: width * 1.5, height: value.translation.height)
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onDecision(true)
+                            }
+                        } else if value.translation.width < -threshold {
+                            withAnimation(.spring()) {
+                                translation = CGSize(width: -width * 1.5, height: value.translation.height)
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onDecision(false)
+                            }
+                        } else {
+                            withAnimation(.spring()) {
+                                translation = .zero
+                            }
+                        }
+                    }
+            )
+        }
+    }
+    
+    private func formatAmount(_ amount: Double, unit: String) -> String {
+        let isInteger = amount.truncatingRemainder(dividingBy: 1) == 0
+        let valStr = isInteger ? String(Int(amount)) : String(format: "%.1f", amount)
+        return "\(valStr) \(unit)"
+    }
+}
+
+// MARK: - Add Item View
+struct AddItemView: View {
+    @ObservedObject var authViewModel: AuthViewModel
+    let store: shared.Store
+    @Binding var planningItems: [PlanningItem]
+    var onAdd: (PlanningItem) -> Void
+    
+    @Environment(\.dismiss) var dismiss
+    @State private var showProductForm = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Button(action: {
+                    showProductForm = true
+                }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                        Text("Создать новый товар...")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(12)
+                    .padding()
+                }
+                
+                Divider()
+                
+                catalogSelectionView
+            }
+            .navigationTitle("Добавить товар")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Отмена") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showProductForm) {
+                ProductFormSheet(
+                    authViewModel: authViewModel,
+                    store: store,
+                    productToEdit: nil,
+                    onProductCreated: { productName in
+                        let matchedCategory = authViewModel.categories.first
+                        let newItem = PlanningItem(
+                            id: UUID().uuidString,
+                            name: productName,
+                            categoryName: matchedCategory?.name ?? "Без категории",
+                            amount: 1.0,
+                            unit: "шт",
+                            isNeeded: true
+                        )
+                        onAdd(newItem)
+                        showProductForm = false
+                        dismiss()
+                    }
+                )
+            }
+        }
+    }
+    
+    var catalogSelectionView: some View {
+        Group {
+            let alreadyAddedNames = Set(planningItems.filter { $0.isNeeded }.map { $0.name.lowercased() })
+            let availableProducts = authViewModel.products.filter { !alreadyAddedNames.contains($0.name.lowercased()) }
+            
+            if availableProducts.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "cart.badge.questionmark")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary.opacity(0.6))
+                    Text("Все товары из каталога добавлены")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Вы можете создать новый товар, нажав на кнопку выше.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .frame(maxHeight: .infinity)
+            } else {
+                List(availableProducts, id: \.id) { product in
+                    Button(action: {
+                        let categoryName = product.categories.first?.name ?? "Без категории"
+                        let newItem = PlanningItem(
+                            id: product.id,
+                            name: product.name,
+                            categoryName: categoryName,
+                            amount: 1.0,
+                            unit: product.unit,
+                            isNeeded: true
+                        )
+                        onAdd(newItem)
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(product.name)
+                                    .foregroundColor(.primary)
+                                Text(product.categories.first?.name ?? "Без категории")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1451,6 +2271,7 @@ struct ProductFormSheet: View {
     @ObservedObject var authViewModel: AuthViewModel
     let store: shared.Store
     let productToEdit: shared.Product?
+    var onProductCreated: ((String) -> Void)? = nil
     
     @State private var name = ""
     @State private var selectedUnit = "шт"
@@ -1558,6 +2379,7 @@ struct ProductFormSheet: View {
                                     categoryIds: catIdsArray,
                                     storeId: store.id
                                 )
+                                onProductCreated?(name)
                             }
                             dismiss()
                         }

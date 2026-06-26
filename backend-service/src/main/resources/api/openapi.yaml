@@ -548,6 +548,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/StoreProductsResponse'
 
+  /v1/{householdId}/shopping-lists:
+    get:
+      tags:
+        - ShoppingLists
+      summary: Получить список всех списков покупок домовладения
+      operationId: listShoppingLists
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список всех списков покупок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShoppingListDto'
+    post:
+      tags:
+        - ShoppingLists
+      summary: Создать новый список покупок
+      operationId: createShoppingList
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShoppingListRequest'
+      responses:
+        '200':
+          description: Список покупок успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingListDto'
+
+  /v1/{householdId}/shopping-lists/{id}:
+    put:
+      tags:
+        - ShoppingLists
+      summary: Обновить список покупок
+      operationId: updateShoppingList
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShoppingListRequest'
+      responses:
+        '200':
+          description: Список покупок обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingListDto'
+    delete:
+      tags:
+        - ShoppingLists
+      summary: Удалить список покупок
+      operationId: deleteShoppingList
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Список покупок удален
+
 components:
   schemas:
     HouseholdDto:
@@ -847,6 +949,104 @@ components:
           items:
             type: string
             format: uuid
+
+    ShoppingListDto:
+      type: object
+      required:
+        - id
+        - householdId
+        - storeId
+        - completed
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        completed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShoppingListItemDto'
+
+    ShoppingListItemDto:
+      type: object
+      required:
+        - id
+        - name
+        - categoryName
+        - amount
+        - unit
+        - bought
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        categoryName:
+          type: string
+        amount:
+          type: number
+          format: double
+        unit:
+          type: string
+        bought:
+          type: boolean
+
+    CreateShoppingListRequest:
+      type: object
+      required:
+        - storeId
+        - items
+      properties:
+        storeId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateShoppingListItemRequest'
+
+    CreateShoppingListItemRequest:
+      type: object
+      required:
+        - name
+        - categoryName
+        - amount
+        - unit
+      properties:
+        name:
+          type: string
+        categoryName:
+          type: string
+        amount:
+          type: number
+          format: double
+        unit:
+          type: string
+
+    UpdateShoppingListRequest:
+      type: object
+      required:
+        - completed
+        - items
+      properties:
+        completed:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateShoppingListItemRequest'
 
 
 
